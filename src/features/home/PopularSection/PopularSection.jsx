@@ -1,4 +1,6 @@
+import { Link } from 'react-router-dom'
 import SectionHeading from '@/components/SectionHeading/SectionHeading'
+import Loading from '@/components/Loading/Loading'
 import { useMenuItems } from '@/hooks/useMenuItems'
 import { formatCurrency } from '@/utils/formatCurrency'
 import styles from './PopularSection.module.scss'
@@ -30,11 +32,11 @@ const PopularSection = () => {
         ) : null}
 
         {loading ? (
-          <p className={styles.feedback}>Đang tải món ăn nổi bật...</p>
+          <Loading text="Đang tải món ăn nổi bật..." />
         ) : (
           <div className={styles.grid}>
             {data.map((item) => (
-              <article key={item.id} className={styles.card}>
+              <Link key={item.id} to={`/menu/${item.id}`} className={styles.card}>
                 <img src={fallbackImages[item.category] || fallbackImages.default} alt={item.name} />
                 <div className={styles.body}>
                   <header>
@@ -47,7 +49,7 @@ const PopularSection = () => {
                     <span>{item.type}</span>
                   </div>
                 </div>
-              </article>
+              </Link>
             ))}
             {!data.length && !loading ? <p className={styles.feedback}>Chưa có món nào.</p> : null}
           </div>

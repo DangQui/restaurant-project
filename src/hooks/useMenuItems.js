@@ -1,34 +1,56 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useReducer } from 'react'
 import { getMenuItems } from '@/services/menuService'
 
-export const useMenuItems = (params = {}) => {
-  const [data, setData] = useState([])
-  const [pagination, setPagination] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+const initialState = {
+  data: [],
+  pagination: null,
+  loading: true,
+  error: null,
+}
 
+const reducer = (state, action) => {
+  switch (action.type) {
+    case 'REQUEST':
+      return { ...state, loading: true, error: null }
+    case 'SUCCESS':
+      return {
+        ...state,
+        loading: false,
+        data: action.payload.data,
+        pagination: action.payload.pagination,
+      }
+    case 'FAILURE':
+      return { ...state, loading: false, error: action.payload, data: [] }
+    default:
+      return state
+  }
+}
+
+export const useMenuItems = (params = {}) => {
   const serializedParams = useMemo(() => JSON.stringify(params), [params])
+  const [state, dispatch] = useReducer(reducer, initialState)
 
   useEffect(() => {
     let isMounted = true
-    setLoading(true)
-    setError(null)
+    dispatch({ type: 'REQUEST' })
 
-    getMenuItems(params)
+    const requestParams = JSON.parse(serializedParams)
+
+    getMenuItems(requestParams)
       .then((response) => {
         if (!isMounted) return
-        setData(response?.data || [])
-        setPagination(response?.pagination || null)
+        dispatch({
+          type: 'SUCCESS',
+          payload: {
+            data: response?.data || [],
+            pagination: response?.pagination || null,
+          },
+        })
       })
       .catch((err) => {
         if (!isMounted) return
         console.error('Fetch menu items error:', err)
-        setError(err.message || 'Không thể tải dữ liệu menu')
-      })
-      .finally(() => {
-        if (isMounted) {
-          setLoading(false)
-        }
+        dispatch({ type: 'FAILURE', payload: err.message || 'Không thể tải dữ liệu menu' })
       })
 
     return () => {
@@ -36,6 +58,6 @@ export const useMenuItems = (params = {}) => {
     }
   }, [serializedParams])
 
-  return { data, pagination, loading, error }
+  return state
 }
 

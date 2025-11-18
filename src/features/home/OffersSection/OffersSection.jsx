@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import SectionHeading from '@/components/SectionHeading/SectionHeading'
 import { useMenuItems } from '@/hooks/useMenuItems'
 import { formatCurrency } from '@/utils/formatCurrency'
@@ -28,13 +29,13 @@ const OffersSection = () => {
           ) : (
             <div className={styles.items}>
               {offers.map((offer) => (
-                <article key={offer.id}>
+                <Link key={offer.id} to={`/menu/${offer.id}`} className={styles.itemLink}>
                   <div>
                     <h4>{offer.name}</h4>
                     <p>{offer.description || `Phục vụ vào bữa ${offer.category}.`}</p>
                   </div>
                   <span>{formatCurrency(offer.price)}</span>
-                </article>
+                </Link>
               ))}
               {!offers.length && !loading ? (
                 <p className={styles.feedback}>Chưa có ưu đãi nào.</p>

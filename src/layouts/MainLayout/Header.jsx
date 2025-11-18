@@ -1,24 +1,28 @@
 import { NavLink } from 'react-router-dom'
+import LogoButton from '@/components/Logo/LogoButton'
+import SearchBar from '@/components/SearchBar/SearchBar'
+import { useLogoNavigation } from '@/hooks/useLogoNavigation'
 import styles from './Header.module.scss'
 
 const navItems = [
-  { path: '/', label: 'Home' },
-  { path: '/menu', label: 'Menu' },
+  { path: '/', label: 'Trang chủ' },
+  { path: '/menu', label: 'Thực đơn' },
   { path: '/blog', label: 'Blog' },
-  { path: '/pages', label: 'Pages' },
-  { path: '/contact', label: 'Contact' },
+  { path: '/pages', label: 'Trang' },
+  { path: '/contact', label: 'Liên hệ' },
 ]
 
 const Header = () => {
-  const currentTime = new Date().toLocaleTimeString('en-US', {
+  const currentTime = new Date().toLocaleTimeString('vi-VN', {
     hour: '2-digit',
     minute: '2-digit',
-    hour12: false,
   })
+  const handleLogoClick = useLogoNavigation()
 
   return (
     <header className={styles.header}>
       <div className={styles.container}>
+        <div className={styles.leftSection}>
         <nav className={styles.navLeft}>
           {navItems.map((item) => (
             <NavLink
@@ -30,16 +34,17 @@ const Header = () => {
             </NavLink>
           ))}
         </nav>
+        <SearchBar className={styles.searchBar} />
+        </div>
 
-        <div className={styles.logo}>
-          {/* Logo: white circular với fork and spoon icon - user tự thêm */}
-          {/* <img src="/logo.svg" alt="Logo" /> */}
+        <div className={styles.logoWrapper}>
+          <LogoButton onClick={handleLogoClick} />
         </div>
 
         <div className={styles.rightSection}>
-          <span className={styles.status}>{currentTime} we're open</span>
+          <span className={styles.status}>{currentTime} chúng tôi đang mở cửa</span>
           <NavLink to="/reservation" className={styles.reservationLink}>
-            Table Reservation
+            Đặt bàn
           </NavLink>
         </div>
       </div>

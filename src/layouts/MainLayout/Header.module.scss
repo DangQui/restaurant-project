@@ -19,6 +19,13 @@
   position: relative;
 }
 
+.leftSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
 .navLeft {
   display: flex;
   align-items: center;
@@ -42,30 +49,30 @@
   }
 }
 
-.logo {
+.logoWrapper {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  border: 2px solid #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-
-  img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-  }
 }
 
 .rightSection {
   display: flex;
   align-items: center;
   gap: 1.5rem;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.searchBar {
+  max-width: 300px;
+
+  @media (max-width: 1024px) {
+    max-width: 200px;
+  }
+
+  @media (max-width: 768px) {
+    display: none;
+  }
 }
 
 .status {

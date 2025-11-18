@@ -8,19 +8,25 @@ import ChefSection from '@/features/home/ChefSection/ChefSection'
 import ArticlesSection from '@/features/home/ArticlesSection/ArticlesSection'
 import NewsletterSection from '@/features/home/NewsletterSection/NewsletterSection'
 
-const HomePage = () => (
-  <>
-    <HeroSection />
-    <PopularSection />
-    <MenuSection />
-    <VisitSection />
-    <OffersSection />
-    <ServicesRibbon />
-    <ChefSection />
-    <ArticlesSection />
-    <NewsletterSection />
-  </>
-)
+import { useHomeScrollMemory } from '@/hooks/useHomeScrollMemory'
+
+const HomePage = () => {
+  useHomeScrollMemory()
+
+  return (
+    <>
+      <HeroSection />
+      <PopularSection />
+      <MenuSection />
+      <VisitSection />
+      <OffersSection />
+      <ServicesRibbon />
+      <ChefSection />
+      <ArticlesSection />
+      <NewsletterSection />
+    </>
+  )
+}
 
 export default HomePage
 
