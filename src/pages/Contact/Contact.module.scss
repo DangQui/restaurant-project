@@ -1,0 +1,21 @@
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+
+.placeholder {
+  min-height: 60vh;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  @include section-spacing(4rem 0);
+
+  h1 {
+    font-family: $font-primary;
+    font-size: clamp(2rem, 4vw, 3rem);
+  }
+
+  p {
+    color: $color-muted;
+  }
+}
+
+

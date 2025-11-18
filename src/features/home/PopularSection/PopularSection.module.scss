@@ -1,0 +1,71 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+.popular {
+  @include section-spacing(4rem 0);
+}
+
+.container {
+  @include container;
+}
+
+.grid {
+  margin-top: 3rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.75rem;
+}
+
+.card {
+  border-radius: 1.5rem;
+  overflow: hidden;
+  border: 1px solid $color-border;
+  background-color: $color-card;
+  display: flex;
+  flex-direction: column;
+
+  img {
+    height: 220px;
+    object-fit: cover;
+  }
+}
+
+.body {
+  padding: 1.5rem;
+
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.75rem;
+
+    h3 {
+      margin: 0;
+      font-size: 1.35rem;
+      font-family: $font-primary;
+    }
+  }
+
+  p {
+    color: $color-muted;
+  }
+}
+
+.price {
+  color: $color-accent;
+  font-weight: 600;
+}
+
+.meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: $color-muted;
+}
+
+.feedback {
+  margin-top: 2rem;
+  text-align: center;
+  color: $color-muted;
+}
+
