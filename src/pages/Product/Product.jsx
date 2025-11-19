@@ -6,6 +6,7 @@ import { useMenuItemDetail } from '@/hooks/useMenuItemDetail'
 import { useMenuItems } from '@/hooks/useMenuItems'
 import { createRating } from '@/services/menuService'
 import { formatCurrency } from '@/utils/formatCurrency'
+import { useCartContext } from '@/store/CartContext'
 import styles from './Product.module.scss'
 
 const RatingStars = ({ score = 0 }) => {
@@ -34,8 +35,9 @@ const ProductPage = () => {
   const [reviewStatus, setReviewStatus] = useState({ submitting: false, error: null, success: null })
   const [reviewErrors, setReviewErrors] = useState({ name: '', email: '', comment: '' })
   const [touchedFields, setTouchedFields] = useState({ name: false, email: false, comment: false })
+  const { addItemToCart } = useCartContext()
 
-  const { data: product, loading, error } = useMenuItemDetail(productId, detailRefresh)
+  const { data: product, initialLoading, error } = useMenuItemDetail(productId, detailRefresh)
 
   const relatedParams = useMemo(() => {
     if (!product) return null
@@ -55,7 +57,6 @@ const ProductPage = () => {
 
   const handleReviewChange = (field, value) => {
     setReviewForm((prev) => ({ ...prev, [field]: value }))
-    // Clear error khi user đang nhập
     if (reviewErrors[field]) {
       setReviewErrors((prev) => ({ ...prev, [field]: '' }))
     }
@@ -128,7 +129,7 @@ const ProductPage = () => {
     }
   }
 
-  if (loading) {
+  if (initialLoading) {
     return <Loading fullScreen text="Đang tải thông tin món ăn..." />
   }
 
@@ -148,6 +149,20 @@ const ProductPage = () => {
   const coverImage =
     product.imageUrl ||
     'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80'
+
+  const handleAddToCart = () => {
+    addItemToCart({
+      menuItemId: product.id,
+      price: product.price,
+      quantity,
+      name: product.name,
+      meta: {
+        imageUrl: coverImage,
+        description: product.description,
+        category: product.category,
+      },
+    })
+  }
 
   return (
     <div className={styles.page}>
@@ -186,7 +201,9 @@ const ProductPage = () => {
                 +
               </button>
             </div>
-            <Button size="lg">Thêm vào giỏ</Button>
+            <Button size="lg" onClick={handleAddToCart}>
+              Thêm vào giỏ
+            </Button>
           </div>
 
           <ul className={styles.meta}>
@@ -195,12 +212,12 @@ const ProductPage = () => {
               <strong>{product.sku || 'Đang cập nhật'}</strong>
             </li>
             <li>
-              <span>Category</span>
+              <span>Danh mục</span>
               <strong>{product.category}</strong>
             </li>
             <li>
-              <span>Tags</span>
-              <strong>{(product.tags || []).join(', ') || 'Seasonal'}</strong>
+              <span>Nhãn</span>
+              <strong>{(product.tags || []).join(', ') || 'Theo mùa'}</strong>
             </li>
           </ul>
         </div>
@@ -209,10 +226,10 @@ const ProductPage = () => {
       <section className={styles.tabs}>
         <div className={styles.tabHeader}>
           <button type="button" data-active={activeTab === 'description'} onClick={() => setActiveTab('description')}>
-            Description
+            Mô tả
           </button>
           <button type="button" data-active={activeTab === 'reviews'} onClick={() => setActiveTab('reviews')}>
-            Reviews ({ratingCount})
+            Đánh giá ({ratingCount})
           </button>
         </div>
 

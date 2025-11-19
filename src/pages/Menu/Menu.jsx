@@ -1,4 +1,5 @@
 import { Fragment, useMemo } from 'react'
+import { Link } from 'react-router-dom'
 import Button from '@/components/Button/Button'
 import MenuSection from '@/features/menu/MenuSection/MenuSection'
 import MenuTabs from '@/features/menu/MenuTabs/MenuTabs'
@@ -78,7 +79,9 @@ const MenuPage = () => {
                 <span className="pill">Trải nghiệm</span>
                 <h3>Ăn uống không chỉ là nạp năng lượng.</h3>
                 <p>Đó là khoảnh khắc ôm trọn cảm xúc, trò chuyện và ghi nhớ từng hương vị tuyệt vời.</p>
-                <Button>Đặt món ngay</Button>
+                <Button as={Link} to="/cart">
+                  Đặt món ngay
+                </Button>
               </div>
             </section>
           ) : null}

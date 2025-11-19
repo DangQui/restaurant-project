@@ -26,3 +26,7 @@ const Loading = ({ size = 40, color, fullScreen = false, text, className }) => {
 
 export default Loading
 
+
+
+
+

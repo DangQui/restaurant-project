@@ -5,6 +5,7 @@ import { useKeenSlider } from 'keen-slider/react'
 import 'keen-slider/keen-slider.min.css'
 import Button from '@/components/Button/Button'
 import { formatCurrency } from '@/utils/formatCurrency'
+import { useCartContext } from '@/store/CartContext'
 import styles from './MenuSection.module.scss'
 
 const FALLBACK_IMAGE =
@@ -12,6 +13,7 @@ const FALLBACK_IMAGE =
 
 const MenuSection = ({ id, eyebrow, title, description, items = [], loading }) => {
   const [_, setLoopTick] = useState(0)
+  const { addItemToCart } = useCartContext()
 
   const handleControls = (slider) => {
     // Force a rerender so KeenSlider updates arrow states if needed in future
@@ -103,8 +105,22 @@ const MenuSection = ({ id, eyebrow, title, description, items = [], loading }) =
                   <span className={styles.priceLabel}>Giá</span>
                   <strong className={styles.price}>{formatCurrency(item.price)}</strong>
                 </div>
-                <Button as={Link} to={`/menu/${item.id}`} size="sm">
-                  {item.ctaLabel || 'Xem chi tiết'}
+                <Button
+                  size="sm"
+                  onClick={() =>
+                    addItemToCart({
+                      menuItemId: item.id,
+                      price: item.price,
+                      name: item.name,
+                      meta: {
+                        imageUrl: item.imageUrl || FALLBACK_IMAGE,
+                        description: item.description,
+                        category: item.category,
+                      },
+                    })
+                  }
+                >
+                  {item.ctaLabel || 'Thêm giỏ hàng'}
                 </Button>
               </div>
             </article>

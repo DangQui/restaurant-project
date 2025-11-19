@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { Link } from 'react-router-dom'
 import Button from '@/components/Button/Button'
 import StatCard from '@/components/StatCard/StatCard'
 import Tagline from '@/components/Tagline/Tagline'
@@ -23,23 +24,22 @@ const HeroSection = () => {
     <section className={`${styles.hero} page-section`}>
       <div className={styles.container}>
         <div className={styles.content}>
-          <Tagline>Signature Cuisine</Tagline>
+          <Tagline>Trải nghiệm đặc trưng</Tagline>
           <h1>
-            We Do Not Cook,
+            Chúng tôi không chỉ nấu ăn,
             <br />
-            We Create Your Emotions!
+            chúng tôi tạo nên cảm xúc!
           </h1>
           <p>
-            Hơn 15 năm đồng hành cùng giới sành ăn với thực đơn fusion độc đáo, Mellow Taste mang
-            đến trải nghiệm ẩm thực tinh tế, nơi mỗi nguyên liệu đều được kể lại như một câu
-            chuyện.
+            Hơn 15 năm đồng hành cùng giới sành ăn với thực đơn fusion độc đáo, WowWraps mang đến trải nghiệm ẩm thực
+            tinh tế, nơi mỗi nguyên liệu đều kể một câu chuyện riêng.
           </p>
           <div className={styles.actionRow}>
-            <Button variant="primary" size="lg">
-              Preview Menu
+            <Button as={Link} to="/menu" variant="primary" size="lg">
+              Khám phá thực đơn
             </Button>
-            <Button variant="secondary" size="lg">
-              Reserve A Table
+            <Button as={Link} to="/reservation" variant="secondary" size="lg">
+              Đặt bàn tức thì
             </Button>
           </div>
           <div className={styles.stats}>

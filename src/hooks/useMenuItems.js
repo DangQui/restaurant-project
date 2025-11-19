@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useReducer } from 'react'
 import { getMenuItems } from '@/services/menuService'
+import { mockMenuItems } from '@/services/data/mockMenuItems'
 
 const initialState = {
   data: [],
@@ -50,6 +51,18 @@ export const useMenuItems = (params = {}) => {
       .catch((err) => {
         if (!isMounted) return
         console.error('Fetch menu items error:', err)
+        if (mockMenuItems.length) {
+          dispatch({
+            type: 'SUCCESS',
+            payload: {
+              data: mockMenuItems,
+              pagination: {
+                total: mockMenuItems.length,
+              },
+            },
+          })
+          return
+        }
         dispatch({ type: 'FAILURE', payload: err.message || 'Không thể tải dữ liệu menu' })
       })
 
