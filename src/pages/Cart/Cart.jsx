@@ -1,17 +1,21 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import clsx from "clsx";
 import Button from "@/components/Button/Button";
 import Loading from "@/components/Loading/Loading";
 import { useCart } from "@/hooks/useCart";
 import { formatCurrency } from "@/utils/formatCurrency";
 import styles from "./Cart.module.scss";
+import { useAuthContext } from "@/store/AuthContext";
 
 const CartPage = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const fallbackOrderId = import.meta.env.VITE_DEFAULT_ORDER_ID || "1";
-  const orderId = searchParams.get("orderId") || fallbackOrderId;
+  const {
+    isAuthenticated,
+    openAuthModal,
+    loading: authLoading,
+  } = useAuthContext();
 
   const {
     items,
@@ -22,35 +26,16 @@ const CartPage = () => {
     initialLoading,
     error,
     refresh,
-    order,
-    updatingItemId,
-    removingItemId,
+    cart,
     couponStatus,
     updateItemQuantity,
     removeItem,
     applyCoupon,
-    saveDeliveryInfo,
-    addressSaving,
-  } = useCart(orderId);
+    hasPendingSync,
+    syncingChanges,
+  } = useCart();
 
   const [couponInput, setCouponInput] = useState("");
-  const [addressForm, setAddressForm] = useState({
-    customerName: "",
-    customerPhone: "",
-    deliveryAddress: "",
-    deliveryNote: "",
-  });
-
-  useEffect(() => {
-    // Dữ liệu giao hàng được đồng bộ từ backend mỗi khi đơn hàng thay đổi
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setAddressForm({
-      customerName: order?.customerName || "",
-      customerPhone: order?.customerPhone || "",
-      deliveryAddress: order?.deliveryAddress || "",
-      deliveryNote: order?.deliveryNote || "",
-    });
-  }, [order]);
 
   const handleQuantityChange = (itemId, nextQuantity) => {
     if (nextQuantity < 1) return;
@@ -63,23 +48,47 @@ const CartPage = () => {
   };
 
   const shippingLabel = useMemo(() => {
-    if (!order?.orderType) return "Đơn tiêu chuẩn";
-    return order.orderType === "delivery"
-      ? "Giao tận nơi"
-      : "Dùng tại nhà hàng";
-  }, [order?.orderType]);
-
-  const handleAddressChange = (field, value) => {
-    setAddressForm((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleAddressSave = () => {
-    saveDeliveryInfo(addressForm);
-  };
+    if (!cart?.orderType) return "Đơn tiêu chuẩn";
+    return cart.orderType === "delivery" ? "Giao tận nơi" : "Dùng tại nhà hàng";
+  }, [cart?.orderType]);
 
   const handleCheckout = () => {
-    navigate(`/checkout?orderId=${orderId}`);
+    if (!isAuthenticated) {
+      openAuthModal("login");
+      return;
+    }
+
+    if (items.length === 0) {
+      toast.error("Giỏ hàng trống", {
+        description: "Vui lòng thêm sản phẩm vào giỏ hàng trước khi thanh toán",
+      });
+      return;
+    }
+
+    navigate("/checkout");
   };
+
+  if (authLoading) {
+    return <Loading fullScreen text="Đang kiểm tra phiên đăng nhập..." />;
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.hero}>
+          <div className={styles.heroContent}>
+            <span className="pill">Giỏ hàng</span>
+            <h1>Vui lòng đăng nhập</h1>
+            <p>
+              Giỏ hàng được bảo lưu trong tài khoản của bạn. Đăng nhập để xem và
+              tiếp tục đặt món.
+            </p>
+            <Button onClick={() => openAuthModal("login")}>Đăng nhập</Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (initialLoading) {
     return <Loading fullScreen text="Đang tải giỏ hàng..." />;
@@ -97,7 +106,7 @@ const CartPage = () => {
             chỉ trong vài giây.
           </p>
           <div className={styles.heroMeta}>
-            <span>Mã đơn #{order?.id || "đang cập nhật"}</span>
+            <span>Mã giỏ #{cart?.id || "đang cập nhật"}</span>
             <span>Hình thức: {shippingLabel}</span>
           </div>
         </div>
@@ -114,6 +123,14 @@ const CartPage = () => {
 
       <div className={styles.layout}>
         <section className={styles.cartPanel}>
+          {hasPendingSync ? (
+            <p className={styles.syncNotice}>
+              Đang chờ cập nhật thay đổi của bạn...
+            </p>
+          ) : null}
+          {syncingChanges ? (
+            <p className={styles.syncNotice}>Đang đồng bộ với máy chủ...</p>
+          ) : null}
           <div className={styles.tableHeader}>
             <span>Món ăn</span>
             <span>Đơn giá</span>
@@ -131,9 +148,6 @@ const CartPage = () => {
           ) : (
             <>
               {items.map((item) => {
-                const isUpdating = updatingItemId === item.id;
-                const isRemoving = removingItemId === item.id;
-
                 return (
                   <article key={item.id} className={styles.row}>
                     <div className={styles.foodCell}>
@@ -141,7 +155,7 @@ const CartPage = () => {
                         type="button"
                         className={styles.removeButton}
                         onClick={() => removeItem(item.id)}
-                        disabled={isRemoving || isUpdating}
+                        disabled={syncingChanges}
                         aria-label={`Xoá ${item.name}`}>
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -175,9 +189,7 @@ const CartPage = () => {
                         onClick={() =>
                           handleQuantityChange(item.id, item.quantity - 1)
                         }
-                        disabled={
-                          item.quantity <= 1 || isUpdating || isRemoving
-                        }>
+                        disabled={item.quantity <= 1 || syncingChanges}>
                         –
                       </button>
                       <span>{item.quantity}</span>
@@ -186,7 +198,7 @@ const CartPage = () => {
                         onClick={() =>
                           handleQuantityChange(item.id, item.quantity + 1)
                         }
-                        disabled={isUpdating || isRemoving}>
+                        disabled={syncingChanges}>
                         +
                       </button>
                     </div>
@@ -214,9 +226,6 @@ const CartPage = () => {
                     ? "Đang áp dụng..."
                     : "Áp dụng mã"}
                 </Button>
-                <Button type="button" variant="secondary" onClick={refresh}>
-                  Cập nhật giỏ
-                </Button>
               </form>
             </>
           )}
@@ -236,71 +245,12 @@ const CartPage = () => {
             <div>
               <p>Phí giao món</p>
               <small>
-                {order?.deliveryAddress
-                  ? `Giao tới ${order.deliveryAddress}`
+                {cart?.deliveryAddress
+                  ? `Giao tới ${cart.deliveryAddress}`
                   : "Cập nhật địa chỉ để tính phí chính xác"}
               </small>
             </div>
             <span>{shippingFee ? formatCurrency(shippingFee) : "0 ₫"}</span>
-          </div>
-
-          <div className={styles.address}>
-            <p className={styles.addressTitle}>Cập nhật địa chỉ giao món</p>
-            <div className={styles.addressFields}>
-              <label>
-                Họ tên
-                <input
-                  type="text"
-                  value={addressForm.customerName}
-                  onChange={(event) =>
-                    handleAddressChange("customerName", event.target.value)
-                  }
-                  placeholder="Ví dụ: Nguyễn Minh Anh"
-                />
-              </label>
-              <label>
-                Số điện thoại
-                <input
-                  type="tel"
-                  value={addressForm.customerPhone}
-                  onChange={(event) =>
-                    handleAddressChange("customerPhone", event.target.value)
-                  }
-                  placeholder="0987 654 321"
-                />
-              </label>
-              <label>
-                Địa chỉ giao món
-                <textarea
-                  rows={3}
-                  value={addressForm.deliveryAddress}
-                  onChange={(event) =>
-                    handleAddressChange("deliveryAddress", event.target.value)
-                  }
-                  placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành"
-                />
-              </label>
-              <label>
-                Ghi chú cho tài xế
-                <textarea
-                  rows={2}
-                  value={addressForm.deliveryNote}
-                  onChange={(event) =>
-                    handleAddressChange("deliveryNote", event.target.value)
-                  }
-                  placeholder="Ví dụ: Gọi trước 5 phút, gửi bảo vệ..."
-                />
-              </label>
-
-              <Button
-                type="button"
-                variant="secondary"
-                className={styles.addressButton}
-                onClick={handleAddressSave}
-                disabled={addressSaving}>
-                {addressSaving ? "Đang lưu..." : "Lưu thông tin giao hàng"}
-              </Button>
-            </div>
           </div>
 
           <div className={clsx(styles.summaryRow, styles.totalRow)}>
@@ -308,7 +258,10 @@ const CartPage = () => {
             <strong>{formatCurrency(total)}</strong>
           </div>
 
-          <Button className={styles.checkoutButton} onClick={handleCheckout}>
+          <Button
+            className={styles.checkoutButton}
+            onClick={handleCheckout}
+            disabled={items.length === 0}>
             Tiến hành thanh toán
           </Button>
           <p className={styles.helperText}>

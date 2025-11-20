@@ -1,6 +1,6 @@
-@use './variables' as *;
+@use "./variables" as *;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@500;600;700&display=swap");
 
 :root {
   color-scheme: dark;
@@ -54,6 +54,21 @@ button {
 .page-section {
   position: relative;
   z-index: 1;
+}
+
+.page-shell {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 4rem 1.5rem;
+
+  h1 {
+    margin: 1rem 0;
+    font-size: clamp(2rem, 4vw, 3rem);
+  }
+
+  p {
+    color: rgba(255, 255, 255, 0.7);
+  }
 }
 
 .pill {
@@ -196,5 +211,3 @@ button {
 .animate-stagger > *:nth-child(n + 6) {
   animation-delay: 0.6s;
 }
-
-

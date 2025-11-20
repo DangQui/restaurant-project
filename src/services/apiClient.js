@@ -1,6 +1,7 @@
 const BASE_URL = (
   import.meta.env.VITE_ORDER_SERVICE_URL || "http://localhost:3001/api/"
 ).replace(/(?<!:)\/\/+/g, "/");
+
 let AUTH_TOKEN = null;
 
 export const setAuthToken = (token) => {

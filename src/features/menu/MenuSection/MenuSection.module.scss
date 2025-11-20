@@ -1,5 +1,5 @@
-@use '../../../styles/variables' as *;
-@use '../../../styles/mixins' as *;
+@use "../../../styles/variables" as *;
+@use "../../../styles/mixins" as *;
 
 .section {
   @include container;
@@ -9,7 +9,7 @@
 
 .headerRow {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 2rem;
   margin-bottom: 2rem;
@@ -46,7 +46,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: transform $transition-base, box-shadow $transition-base, background $transition-base;
+  transition: transform $transition-base, box-shadow $transition-base,
+    background $transition-base;
 
   svg {
     width: 28px;
@@ -184,7 +185,11 @@
 .skeleton {
   height: 320px;
   border-radius: 24px;
-  background: linear-gradient(120deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+  background: linear-gradient(
+    120deg,
+    rgba(255, 255, 255, 0.08),
+    rgba(255, 255, 255, 0.03)
+  );
   animation: pulse 1.5s ease-in-out infinite;
 }
 
@@ -199,4 +204,3 @@
     opacity: 0.6;
   }
 }
-

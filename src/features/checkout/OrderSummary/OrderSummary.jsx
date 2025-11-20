@@ -4,12 +4,12 @@ import styles from "./OrderSummary.module.scss";
 const OrderSummary = ({ items, subtotal, shippingFee, total }) => {
   return (
     <div className={styles.summary}>
-      <h2 className={styles.title}>Your order</h2>
+      <h2 className={styles.title}>Đơn hàng của bạn</h2>
 
       <div className={styles.table}>
         <div className={styles.tableHeader}>
-          <span>Food</span>
-          <span>Subtotal</span>
+          <span>Món ăn</span>
+          <span>Tạm tính</span>
         </div>
 
         <div className={styles.tableBody}>
@@ -28,21 +28,21 @@ const OrderSummary = ({ items, subtotal, shippingFee, total }) => {
 
         <div className={styles.tableFoot}>
           <div className={styles.summaryRow}>
-            <span>Subtotal</span>
+            <span>Tạm tính</span>
             <span>{formatCurrency(subtotal)}</span>
           </div>
 
           <div className={styles.summaryRow}>
-            <span>Shipping</span>
+            <span>Phí giao hàng</span>
             <div className={styles.shippingInfo}>
               <span className={styles.shippingLabel}>
-                Flat rate: {formatCurrency(shippingFee)}
+                Phí cố định: {formatCurrency(shippingFee)}
               </span>
             </div>
           </div>
 
           <div className={styles.totalRow}>
-            <span>Total</span>
+            <span>Tổng cộng</span>
             <strong>{formatCurrency(total)}</strong>
           </div>
         </div>

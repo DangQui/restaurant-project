@@ -88,6 +88,66 @@
   animation: slideDown 0.3s ease-out;
 }
 
+.paymentInfoForm {
+  margin-top: 1.5rem;
+  padding: 1.5rem;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 12px;
+  border: 1px solid rgba(250, 174, 57, 0.2);
+  animation: slideDown 0.4s ease-out;
+}
+
+.paymentInfoTitle {
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1.25rem;
+}
+
+.paymentField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+
+  span {
+    color: $color-muted;
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+
+  input {
+    width: 100%;
+    padding: 0.875rem 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: #fff;
+    font-size: 0.95rem;
+    transition: border-color $transition-base, background $transition-base;
+
+    &:focus {
+      outline: none;
+      border-color: $color-accent;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    &::placeholder {
+      color: rgba(255, 255, 255, 0.3);
+    }
+  }
+}
+
+.paymentGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.required {
+  color: $color-accent;
+}
+
 @keyframes slideDown {
   from {
     opacity: 0;

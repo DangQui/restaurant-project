@@ -1,43 +1,46 @@
-import { useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import Loading from "@/components/Loading/Loading";
 import { useCart } from "@/hooks/useCart";
+import { useCartContext } from "@/store/CartContext";
 import BillingForm from "@/features/checkout/BillingForm/BillingForm";
 import OrderSummary from "@/features/checkout/OrderSummary/OrderSummary";
 import PaymentMethods from "@/features/checkout/PaymentMethods/PaymentMethods";
+import { orderService } from "@/services/orderService";
+import { cartService } from "@/services/cartService";
 import styles from "./Checkout.module.scss";
+import { useAuthContext } from "@/store/AuthContext";
 
 const CheckoutPage = () => {
-  const [searchParams] = useSearchParams();
-  const fallbackOrderId = import.meta.env.VITE_DEFAULT_ORDER_ID || "1";
-  const orderId = searchParams.get("orderId") || fallbackOrderId;
+  const navigate = useNavigate();
+  const { isAuthenticated, openAuthModal, user } = useAuthContext();
+  const { refreshCart } = useCartContext();
 
-  const {
-    items,
-    subtotal,
-    shippingFee,
-    discount,
-    total,
-    initialLoading,
-    error,
-    order,
-  } = useCart(orderId);
+  const { items, subtotal, shippingFee, total, initialLoading, error, cart } =
+    useCart();
 
   const [billingData, setBillingData] = useState({
-    firstName: "",
-    lastName: "",
-    companyName: "",
-    country: "Australia",
-    streetAddress: "",
-    apartment: "",
-    city: "",
-    district: "",
-    postcode: "",
-    phone: "",
-    email: "",
+    customerName: "",
+    customerPhone: "",
+    deliveryAddress: "",
+    deliveryNote: "",
   });
 
+  // Đồng bộ dữ liệu từ cart nếu có
+  useEffect(() => {
+    if (cart) {
+      setBillingData((prev) => ({
+        customerName: cart.customerName || prev.customerName,
+        customerPhone: cart.customerPhone || prev.customerPhone,
+        deliveryAddress: cart.deliveryAddress || prev.deliveryAddress,
+        deliveryNote: cart.deliveryNote || prev.deliveryNote,
+      }));
+    }
+  }, [cart]);
+
   const [paymentMethod, setPaymentMethod] = useState("bank-transfer");
+  const [paymentInfo, setPaymentInfo] = useState(null);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const handleBillingChange = (field, value) => {
@@ -46,21 +49,78 @@ const CheckoutPage = () => {
 
   const handlePlaceOrder = async () => {
     if (!acceptedTerms) {
-      alert("Vui lòng đồng ý với điều khoản để tiếp tục");
+      toast.error("Vui lòng đồng ý với điều khoản để tiếp tục");
       return;
     }
 
-    console.log("Placing order with:", {
-      billing: billingData,
-      payment: paymentMethod,
-      orderId,
-      items,
-      total,
-    });
+    // Validate required fields
+    if (
+      !billingData.customerName ||
+      !billingData.customerPhone ||
+      !billingData.deliveryAddress
+    ) {
+      toast.error("Vui lòng điền đầy đủ thông tin giao hàng");
+      return;
+    }
 
-    // TODO: Implement actual order placement
-    alert("Đặt hàng thành công! (Demo)");
+    if (items.length === 0) {
+      toast.error("Giỏ hàng của bạn đang trống");
+      return;
+    }
+
+    try {
+      toast.loading("Đang tạo đơn hàng...", { id: "placing-order" });
+
+      const order = await orderService.createOrder({
+        items,
+        customerName: billingData.customerName,
+        customerPhone: billingData.customerPhone,
+        deliveryAddress: billingData.deliveryAddress,
+        deliveryNote: billingData.deliveryNote || "",
+        paymentMethod,
+        total,
+        orderType: cart?.orderType || "delivery",
+        userId: user?.id || null,
+      });
+
+      toast.success("Đặt hàng thành công!", {
+        id: "placing-order",
+        description: `Mã đơn hàng: #${order.id}`,
+      });
+
+      // Xóa giỏ hàng sau khi đặt hàng thành công
+      try {
+        await cartService.clearCart();
+        await refreshCart(); // Refresh để cập nhật UI
+      } catch (clearError) {
+        console.error("Lỗi khi xóa giỏ hàng:", clearError);
+        // Không hiển thị lỗi cho user vì đơn hàng đã được tạo thành công
+      }
+
+      // Redirect to orders page or home
+      setTimeout(() => {
+        navigate("/orders");
+      }, 1500);
+    } catch (error) {
+      toast.error("Không thể tạo đơn hàng", {
+        id: "placing-order",
+        description: error.message || "Vui lòng thử lại sau",
+      });
+    }
   };
+
+  if (!isAuthenticated) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.errorState}>
+          <p>Bạn cần đăng nhập trước khi thanh toán.</p>
+          <button type="button" onClick={() => openAuthModal("login")}>
+            Đăng nhập
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (initialLoading) {
     return <Loading fullScreen text="Đang tải thông tin đơn hàng..." />;
@@ -93,6 +153,7 @@ const CheckoutPage = () => {
             <PaymentMethods
               selected={paymentMethod}
               onSelect={setPaymentMethod}
+              onPaymentInfoChange={setPaymentInfo}
             />
 
             <div className={styles.terms}>
@@ -103,13 +164,13 @@ const CheckoutPage = () => {
                   onChange={(e) => setAcceptedTerms(e.target.checked)}
                 />
                 <span>
-                  Your personal data will be used to process your order, support
-                  your experience throughout this website, and for other
-                  purposes described in our{" "}
+                  Dữ liệu cá nhân của bạn sẽ được sử dụng để xử lý đơn hàng, hỗ
+                  trợ trải nghiệm của bạn trên trang web này, và cho các mục
+                  đích khác được mô tả trong{" "}
                   <a href="/privacy" target="_blank">
-                    privacy policy
-                  </a>
-                  .
+                    chính sách bảo mật
+                  </a>{" "}
+                  của chúng tôi.
                 </span>
               </label>
             </div>
@@ -119,7 +180,7 @@ const CheckoutPage = () => {
               className={styles.placeOrderButton}
               onClick={handlePlaceOrder}
               disabled={!acceptedTerms}>
-              Place order
+              Đặt hàng
             </button>
           </div>
         </div>

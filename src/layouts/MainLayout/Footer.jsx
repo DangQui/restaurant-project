@@ -1,10 +1,10 @@
-import { NavLink } from 'react-router-dom'
-import LogoButton from '@/components/Logo/LogoButton'
-import { useLogoNavigation } from '@/hooks/useLogoNavigation'
-import styles from './Footer.module.scss'
+import { NavLink } from "react-router-dom";
+import LogoButton from "@/components/Logo/LogoButton";
+import { useLogoNavigation } from "@/hooks/useLogoNavigation";
+import styles from "./Footer.module.scss";
 
 const Footer = () => {
-  const handleLogoClick = useLogoNavigation()
+  const handleLogoClick = useLogoNavigation();
 
   return (
     <footer className={styles.footer}>
@@ -14,18 +14,26 @@ const Footer = () => {
             <LogoButton onClick={handleLogoClick} />
           </div>
           <h5 className={styles.brandName}>WowWraps</h5>
-          <p className={styles.downloadText}>Tải ứng dụng WowWraps để đặt món mọi lúc.</p>
-        <div className={styles.appButtons}>
-          {/* App Store button - user tự thêm */}
-          <a href="#" className={styles.appButton}>
-            <img src="../../../public/images/AppStore.png" alt="Download on the App Store" />
-          </a>
-          {/* Google Play button - user tự thêm */}
-          <a href="#" className={styles.appButton}>
-            <img src="../../../public/images/GooglePlay.png" alt="GET IT ON Google Play" />
-          </a>
+          <p className={styles.downloadText}>
+            Tải ứng dụng WowWraps để đặt món mọi lúc.
+          </p>
+          <div className={styles.appButtons}>
+            {/* App Store button - user tự thêm */}
+            <a href="#" className={styles.appButton}>
+              <img
+                src="../../../public/images/AppStore.png"
+                alt="Download on the App Store"
+              />
+            </a>
+            {/* Google Play button - user tự thêm */}
+            <a href="#" className={styles.appButton}>
+              <img
+                src="../../../public/images/GooglePlay.png"
+                alt="GET IT ON Google Play"
+              />
+            </a>
+          </div>
         </div>
-      </div>
 
         <div className={styles.section}>
           <h6 className={styles.sectionTitle}>Liên kết hữu ích</h6>
@@ -69,14 +77,13 @@ const Footer = () => {
         <div className={styles.section}>
           <h6 className={styles.sectionTitle}>Pháp lý</h6>
           <div className={styles.legalList}>
-            <p>Thiết kế bởi uihut.com</p>
+            <p>Thiết kế bởi Quí, Cường</p>
             <p>©2025. Giữ toàn bộ bản quyền.</p>
           </div>
         </div>
       </div>
     </footer>
-  )
-}
+  );
+};
 
-export default Footer
-
+export default Footer;

@@ -8,66 +8,33 @@ import {
   useState,
 } from "react";
 import { toast } from "sonner";
-import {
-  addCartItem,
-  getCartByOrderId,
-  updateCartItemQuantity,
-} from "@/services/cartService";
+import { cartService } from "@/services/cartService";
 import { useAuthContext } from "@/store/AuthContext";
 
 const CartContext = createContext(null);
 
+const mapServerItem = (item) => ({
+  id: item.id,
+  menuItemId: item.menuItemId,
+  quantity: item.quantity,
+  name: item.menuItem?.name || `Món #${item.menuItemId}`,
+});
+
 export const CartProvider = ({ children }) => {
-  const defaultOrderId = import.meta.env.VITE_DEFAULT_ORDER_ID || "1";
-  const [orderId] = useState(defaultOrderId);
+  const [cart, setCart] = useState(null);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const { isAuthenticated, openAuthModal } = useAuthContext();
+  const {
+    isAuthenticated,
+    openAuthModal,
+    loading: authLoading,
+  } = useAuthContext();
+  const authReady = !authLoading;
 
   const syncItems = useCallback((serverItems = []) => {
-    setItems(
-      serverItems.map((item) => ({
-        id: item.id,
-        menuItemId: item.menuItemId,
-        quantity: item.quantity,
-        name: item.menuItem?.name,
-      }))
-    );
+    setItems(serverItems.map(mapServerItem));
   }, []);
-
-  const refreshCart = useCallback(async () => {
-    if (!orderId || !isAuthenticated) {
-      setItems([]);
-      setError(
-        isAuthenticated
-          ? "Chưa xác định được mã đơn hàng"
-          : "Bạn cần đăng nhập để sử dụng giỏ hàng"
-      );
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const order = await getCartByOrderId(orderId);
-      syncItems(order?.items || []);
-      setError(null);
-    } catch (err) {
-      setError(err.message || "Không thể tải giỏ hàng");
-    } finally {
-      setLoading(false);
-    }
-  }, [orderId, syncItems]);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      refreshCart();
-    } else {
-      setItems([]);
-      setLoading(false);
-    }
-  }, [isAuthenticated, refreshCart]);
 
   const notify = useCallback((variant, title, description) => {
     const message = title || "Thông báo";
@@ -83,8 +50,50 @@ export const CartProvider = ({ children }) => {
     toast(message, options);
   }, []);
 
+  const resetState = useCallback(() => {
+    setCart(null);
+    setItems([]);
+    setError(null);
+    setLoading(false);
+  }, []);
+
+  const refreshCart = useCallback(async () => {
+    if (!authReady) {
+      return;
+    }
+
+    if (!isAuthenticated) {
+      resetState();
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const activeCart = await cartService.getCart();
+      setCart(activeCart);
+      syncItems(activeCart?.items || []);
+      setError(null);
+    } catch (err) {
+      setError(err.message || "Không thể tải giỏ hàng");
+    } finally {
+      setLoading(false);
+    }
+  }, [authReady, isAuthenticated, resetState, syncItems]);
+
+  useEffect(() => {
+    if (!authReady) return;
+    if (isAuthenticated) {
+      refreshCart();
+    } else {
+      resetState();
+    }
+  }, [authReady, isAuthenticated, refreshCart, resetState]);
+
   const addItemToCart = useCallback(
     async ({ menuItemId, quantity = 1, price, name, meta }) => {
+      if (authLoading) {
+        return;
+      }
       if (!isAuthenticated) {
         openAuthModal("login");
         notify(
@@ -95,32 +104,16 @@ export const CartProvider = ({ children }) => {
         return;
       }
 
-      if (!orderId) {
-        notify("error", "Không thể thêm món", "Thiếu mã đơn hàng mặc định");
-        return;
-      }
-
       try {
-        const existingItem = items.find(
-          (item) => item.menuItemId === menuItemId
-        );
-        if (existingItem) {
-          await updateCartItemQuantity(
-            orderId,
-            existingItem.id,
-            existingItem.quantity + quantity
-          );
-        } else {
-          await addCartItem(orderId, {
-            menuItemId,
-            quantity,
-            price,
-            meta: {
-              name,
-              ...meta,
-            },
-          });
-        }
+        await cartService.addItem({
+          menuItemId,
+          quantity,
+          price,
+          meta: {
+            name,
+            ...meta,
+          },
+        });
         await refreshCart();
         notify(
           "success",
@@ -135,12 +128,27 @@ export const CartProvider = ({ children }) => {
         );
       }
     },
-    [items, notify, orderId, refreshCart]
+    [isAuthenticated, notify, openAuthModal, refreshCart]
   );
+
+  const requireAuth = useCallback(() => {
+    if (authLoading) {
+      return false;
+    }
+    if (isAuthenticated) return true;
+    openAuthModal("login");
+    notify(
+      "error",
+      "Vui lòng đăng nhập",
+      "Tính năng này chỉ dành cho thành viên"
+    );
+    return false;
+  }, [authLoading, isAuthenticated, notify, openAuthModal]);
 
   const contextValue = useMemo(
     () => ({
-      orderId,
+      cart,
+      cartId: cart?.id,
       items,
       distinctCount: items.length,
       loading,
@@ -149,27 +157,17 @@ export const CartProvider = ({ children }) => {
       syncItems,
       addItemToCart,
       notify,
-      requireAuth: () => {
-        if (isAuthenticated) return true;
-        openAuthModal("login");
-        notify(
-          "error",
-          "Vui lòng đăng nhập",
-          "Tính năng này chỉ dành cho thành viên"
-        );
-        return false;
-      },
+      requireAuth,
     }),
     [
       addItemToCart,
+      cart,
       error,
-      isAuthenticated,
       items,
       loading,
       notify,
-      openAuthModal,
-      orderId,
       refreshCart,
+      requireAuth,
       syncItems,
     ]
   );

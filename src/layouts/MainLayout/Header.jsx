@@ -54,16 +54,6 @@ const Header = () => {
           <NavLink to="/reservation" className={styles.reservationLink}>
             Đặt bàn
           </NavLink>
-          {isAuthenticated ? (
-            <AvatarMenu />
-          ) : (
-            <button
-              type="button"
-              className={styles.loginBtn}
-              onClick={() => openAuthModal("login")}>
-              Đăng nhập
-            </button>
-          )}
           <NavLink
             to="/cart"
             className={({ isActive }) =>
@@ -83,6 +73,16 @@ const Header = () => {
               </Badge>
             ) : null}
           </NavLink>
+          {isAuthenticated ? (
+            <AvatarMenu />
+          ) : (
+            <button
+              type="button"
+              className={styles.loginBtn}
+              onClick={() => openAuthModal("login")}>
+              Đăng nhập
+            </button>
+          )}
         </div>
       </div>
     </header>

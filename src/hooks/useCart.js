@@ -1,16 +1,16 @@
-import { useCallback, useEffect, useReducer } from "react";
-import {
-  getCartByOrderId,
-  removeCartItem,
-  updateCartItemQuantity,
-  updateOrderDelivery,
-} from "@/services/cartService";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import { cartService } from "@/services/cartService";
+import { useAuthContext } from "@/store/AuthContext";
 import { useCartContext } from "@/store/CartContext";
 
 const SHIPPING_FEE = 6000;
+const DEBOUNCE_DELAY = 3000;
+
+const FALLBACK_IMAGE =
+  "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=600&q=80";
 
 const initialState = {
-  order: null,
+  cart: null,
   items: [],
   subtotal: 0,
   shippingFee: 0,
@@ -19,15 +19,48 @@ const initialState = {
   loading: true,
   initialLoading: true,
   error: null,
-  updatingItemId: null,
-  removingItemId: null,
   couponStatus: "idle",
   couponCode: null,
   addressSaving: false,
+  syncingChanges: false,
 };
 
-const calculateTotal = (subtotal, discount, shipping) => {
-  return Math.max(subtotal - discount + shipping, 0);
+const calculateTotal = (subtotal, discount, shipping) =>
+  Math.max(subtotal - discount + shipping, 0);
+
+const formatServerItems = (cart) =>
+  (cart?.items || []).map((item) => {
+    const unitPrice =
+      typeof item.price === "number" ? item.price : item.menuItem?.price || 0;
+    return {
+      id: item.id,
+      menuItemId: item.menuItemId,
+      name: item.menuItem?.name || `Món #${item.menuItemId}`,
+      description: item.menuItem?.description || "Món ăn trong giỏ hàng",
+      category: item.menuItem?.category || cart?.orderType || "menu",
+      imageUrl: item.menuItem?.imageUrl || FALLBACK_IMAGE,
+      quantity: item.quantity,
+      price: unitPrice,
+      subtotal: unitPrice * item.quantity,
+    };
+  });
+
+const withRecalculatedTotals = (state, nextItems) => {
+  const subtotal = nextItems.reduce(
+    (sum, current) => sum + current.subtotal,
+    0
+  );
+  const shippingFee = nextItems.length ? SHIPPING_FEE : 0;
+  const discount = Math.min(state.discount, subtotal);
+  return {
+    ...state,
+    items: nextItems,
+    subtotal,
+    shippingFee,
+    discount,
+    total: calculateTotal(subtotal, discount, shippingFee),
+    error: null,
+  };
 };
 
 const reducer = (state, action) => {
@@ -35,25 +68,14 @@ const reducer = (state, action) => {
     case "REQUEST":
       return { ...state, loading: true, error: null };
     case "SUCCESS": {
-      const adjustedDiscount = Math.min(
-        state.discount,
-        action.payload.subtotal
-      );
       return {
-        ...state,
+        ...withRecalculatedTotals(
+          state,
+          formatServerItems(action.payload.cart)
+        ),
+        cart: action.payload.cart,
         loading: false,
         initialLoading: false,
-        order: action.payload.order,
-        items: action.payload.items,
-        subtotal: action.payload.subtotal,
-        shippingFee: action.payload.shippingFee,
-        discount: adjustedDiscount,
-        total: calculateTotal(
-          action.payload.subtotal,
-          adjustedDiscount,
-          action.payload.shippingFee
-        ),
-        error: null,
       };
     }
     case "FAILURE":
@@ -65,14 +87,24 @@ const reducer = (state, action) => {
       };
     case "SET_ERROR":
       return { ...state, error: action.payload };
-    case "UPDATE_ITEM_PENDING":
-      return { ...state, updatingItemId: action.payload };
-    case "UPDATE_ITEM_DONE":
-      return { ...state, updatingItemId: null };
-    case "REMOVE_ITEM_PENDING":
-      return { ...state, removingItemId: action.payload };
-    case "REMOVE_ITEM_DONE":
-      return { ...state, removingItemId: null };
+    case "LOCAL_UPDATE_ITEM": {
+      const nextItems = state.items.map((item) =>
+        item.id === action.payload.itemId
+          ? {
+              ...item,
+              quantity: action.payload.quantity,
+              subtotal: item.price * action.payload.quantity,
+            }
+          : item
+      );
+      return withRecalculatedTotals(state, nextItems);
+    }
+    case "LOCAL_REMOVE_ITEM": {
+      const nextItems = state.items.filter(
+        (item) => item.id !== action.payload.itemId
+      );
+      return withRecalculatedTotals(state, nextItems);
+    }
     case "COUPON_REQUEST":
       return { ...state, couponStatus: "loading" };
     case "COUPON_SUCCESS": {
@@ -91,16 +123,28 @@ const reducer = (state, action) => {
       return { ...state, addressSaving: true };
     case "ADDRESS_DONE":
       return { ...state, addressSaving: false };
+    case "SYNC_PENDING":
+      return { ...state, syncingChanges: true };
+    case "SYNC_DONE":
+      return { ...state, syncingChanges: false };
     default:
       return state;
   }
 };
 
-export const useCart = (orderId) => {
+export const useCart = () => {
+  const { loading: authLoading } = useAuthContext();
   const { syncItems, notify, requireAuth } = useCartContext();
   const [state, dispatch] = useReducer(reducer, initialState);
+  const [hasPendingSync, setHasPendingSync] = useState(false);
+  const pendingActionsRef = useRef({});
+  const debounceTimerRef = useRef(null);
 
   const fetchCart = useCallback(() => {
+    if (authLoading) {
+      return;
+    }
+
     if (!requireAuth()) {
       dispatch({
         type: "FAILURE",
@@ -109,53 +153,16 @@ export const useCart = (orderId) => {
       return;
     }
 
-    if (!orderId) {
-      dispatch({ type: "FAILURE", payload: "Không xác định được đơn hàng" });
-      return;
-    }
-
     dispatch({ type: "REQUEST" });
 
-    getCartByOrderId(orderId)
-      .then((order) => {
-        const items = (order?.items || []).map((item) => {
-          const unitPrice =
-            typeof item.price === "number"
-              ? item.price
-              : item.menuItem?.price || 0;
-
-          return {
-            id: item.id,
-            menuItemId: item.menuItemId,
-            name: item.menuItem?.name || `Món #${item.menuItemId}`,
-            description:
-              item.menuItem?.description || "Món ăn trong đơn hàng hiện tại",
-            category: item.menuItem?.category || order?.orderType || "menu",
-            imageUrl:
-              item.menuItem?.imageUrl ||
-              "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=600&q=80",
-            quantity: item.quantity,
-            price: unitPrice,
-            subtotal: unitPrice * item.quantity,
-          };
-        });
-
-        const subtotal = items.reduce(
-          (sum, current) => sum + current.subtotal,
-          0
-        );
-        const shippingFee = items.length ? SHIPPING_FEE : 0;
-
+    cartService
+      .getCart()
+      .then((cart) => {
         dispatch({
           type: "SUCCESS",
-          payload: {
-            order,
-            items,
-            subtotal,
-            shippingFee,
-          },
+          payload: { cart },
         });
-        syncItems(order?.items || []);
+        syncItems(cart?.items || []);
       })
       .catch((error) => {
         dispatch({
@@ -163,48 +170,102 @@ export const useCart = (orderId) => {
           payload: error.message || "Không thể tải giỏ hàng",
         });
       });
-  }, [orderId, requireAuth, syncItems]);
+  }, [authLoading, requireAuth, syncItems]);
 
   useEffect(() => {
     fetchCart();
   }, [fetchCart]);
 
-  const updateItemQuantity = useCallback(
-    async (itemId, quantity) => {
-      if (!orderId || !itemId || quantity < 1) return;
-      if (!requireAuth()) return;
-      dispatch({ type: "UPDATE_ITEM_PENDING", payload: itemId });
+  const flushPendingActions = useCallback(async () => {
+    const pendingEntries = Object.entries(pendingActionsRef.current);
+    pendingActionsRef.current = {};
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
+
+    if (!pendingEntries.length) {
+      setHasPendingSync(false);
+      return;
+    }
+
+    if (!requireAuth()) {
+      setHasPendingSync(false);
+      return;
+    }
+
+    setHasPendingSync(false);
+    dispatch({ type: "SYNC_PENDING" });
+
+    for (const [itemId, action] of pendingEntries) {
       try {
-        await updateCartItemQuantity(orderId, itemId, quantity);
-        dispatch({ type: "UPDATE_ITEM_DONE" });
-        fetchCart();
+        if (action.type === "delete") {
+          await cartService.removeItem(itemId);
+        } else {
+          await cartService.updateItem(itemId, action.quantity);
+        }
       } catch (error) {
-        dispatch({ type: "UPDATE_ITEM_DONE" });
-        const message = error.message || "Không thể cập nhật số lượng";
+        const message = error.message || "Không thể đồng bộ giỏ hàng";
         dispatch({ type: "SET_ERROR", payload: message });
-        notify("error", "Không thể cập nhật số lượng", message);
+        notify("error", "Lỗi đồng bộ giỏ hàng", message);
+      }
+    }
+
+    dispatch({ type: "SYNC_DONE" });
+    fetchCart();
+  }, [fetchCart, notify, requireAuth]);
+
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+      }
+      if (Object.keys(pendingActionsRef.current).length) {
+        flushPendingActions();
+      }
+    };
+  }, [flushPendingActions]);
+
+  const queueAction = useCallback(
+    (itemId, action) => {
+      pendingActionsRef.current[itemId] = action;
+      setHasPendingSync(true);
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      debounceTimerRef.current = setTimeout(() => {
+        flushPendingActions();
+      }, DEBOUNCE_DELAY);
+    },
+    [flushPendingActions]
+  );
+
+  const updateItemQuantity = useCallback(
+    (itemId, quantity) => {
+      if (!itemId) return;
+      if (!requireAuth()) return;
+
+      if (quantity < 1) {
+        dispatch({ type: "LOCAL_REMOVE_ITEM", payload: { itemId } });
+        queueAction(itemId, { type: "delete" });
+      } else {
+        dispatch({ type: "LOCAL_UPDATE_ITEM", payload: { itemId, quantity } });
+        queueAction(itemId, { type: "update", quantity });
       }
     },
-    [fetchCart, notify, orderId, requireAuth]
+    [queueAction, requireAuth]
   );
 
   const removeItem = useCallback(
-    async (itemId) => {
-      if (!orderId || !itemId) return;
+    (itemId) => {
+      if (!itemId) return;
       if (!requireAuth()) return;
-      dispatch({ type: "REMOVE_ITEM_PENDING", payload: itemId });
-      try {
-        await removeCartItem(orderId, itemId);
-        dispatch({ type: "REMOVE_ITEM_DONE" });
-        fetchCart();
-      } catch (error) {
-        dispatch({ type: "REMOVE_ITEM_DONE" });
-        const message = error.message || "Không thể xoá món";
-        dispatch({ type: "SET_ERROR", payload: message });
-        notify("error", "Không thể xoá món", message);
-      }
+
+      dispatch({ type: "LOCAL_REMOVE_ITEM", payload: { itemId } });
+      queueAction(itemId, { type: "delete" });
     },
-    [fetchCart, notify, orderId, requireAuth]
+    [queueAction, requireAuth]
   );
 
   const applyCoupon = useCallback(
@@ -255,25 +316,29 @@ export const useCart = (orderId) => {
         notify("error", "Không áp dụng được mã", error.message);
       }
     },
-    [notify, state.shippingFee, state.subtotal]
+    [notify, requireAuth, state.shippingFee, state.subtotal]
   );
 
   const saveDeliveryInfo = useCallback(
     async (payload) => {
-      if (!orderId || !requireAuth()) return;
+      if (!requireAuth()) return;
       dispatch({ type: "ADDRESS_REQUEST" });
       try {
-        await updateOrderDelivery(orderId, payload);
-        dispatch({ type: "ADDRESS_DONE" });
+        const updated = await cartService.saveDetails(payload);
+        dispatch({
+          type: "SUCCESS",
+          payload: { cart: updated },
+        });
+        syncItems(updated?.items || []);
         notify("success", "Đã lưu địa chỉ giao hàng");
-        fetchCart();
       } catch (error) {
-        dispatch({ type: "ADDRESS_DONE" });
         const message = error.message || "Không thể lưu thông tin giao hàng";
         notify("error", "Không thể lưu thông tin", message);
+      } finally {
+        dispatch({ type: "ADDRESS_DONE" });
       }
     },
-    [fetchCart, notify, orderId]
+    [notify, requireAuth, syncItems]
   );
 
   return {
@@ -283,5 +348,6 @@ export const useCart = (orderId) => {
     removeItem,
     applyCoupon,
     saveDeliveryInfo,
+    hasPendingSync,
   };
 };
