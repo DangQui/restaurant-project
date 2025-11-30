@@ -34,3 +34,7 @@ const AboutNewsletterSection = () => {
 };
 
 export default AboutNewsletterSection;
+
+
+
+

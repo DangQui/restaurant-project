@@ -18,8 +18,8 @@ const MenuSection = () => {
     Lunch: "Bữa trưa",
     Dinner: "Bữa tối",
     Appetizer: "Khai vị",
-    Desserts: "Tráng miệng",
-    Drinks: "Đồ uống",
+    Dessert: "Tráng miệng",
+    Drink: "Đồ uống",
   };
 
   const categories = useMemo(
