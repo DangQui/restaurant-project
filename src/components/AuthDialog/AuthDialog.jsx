@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { toast } from "sonner";
 import { useAuthContext } from "@/store/AuthContext";
 import styles from "./AuthDialog.module.scss";
 
@@ -25,12 +26,25 @@ const AuthDialog = () => {
     setSubmitting(true);
     try {
       if (authView === "login") {
-        await login(loginForm);
+        const user = await login(loginForm);
+        toast.success("Đăng nhập thành công", {
+          description: `Chào mừng trở lại, ${user?.name || user?.email || "bạn"}!`,
+        });
       } else {
         await register(registerForm);
+        toast.success("Đăng ký thành công", {
+          description: "Tài khoản của bạn đã được tạo. Vui lòng đăng nhập.",
+        });
       }
       setLoginForm(initialLogin);
       setRegisterForm(initialRegister);
+    } catch (error) {
+      toast.error(
+        authView === "login" ? "Đăng nhập thất bại" : "Đăng ký thất bại",
+        {
+          description: error.message || "Vui lòng thử lại sau",
+        }
+      );
     } finally {
       setSubmitting(false);
     }

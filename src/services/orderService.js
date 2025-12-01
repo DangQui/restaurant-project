@@ -68,7 +68,7 @@ export const createOrder = async (payload) => {
     // Tạo order items
     if (items && items.length > 0) {
       for (const item of items) {
-        await apiClient.post(`/orders-items/${order.id}/items`, {
+        await apiClient.post(`/orders/${order.id}/items`, {
           body: {
             menuItemId: item.menuItemId,
             quantity: item.quantity,

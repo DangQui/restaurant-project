@@ -133,7 +133,7 @@ const reducer = (state, action) => {
 };
 
 export const useCart = () => {
-  const { loading: authLoading } = useAuthContext();
+  const { loading: authLoading, isAuthenticated } = useAuthContext();
   const { syncItems, notify, requireAuth } = useCartContext();
   const [state, dispatch] = useReducer(reducer, initialState);
   const [hasPendingSync, setHasPendingSync] = useState(false);
@@ -145,7 +145,7 @@ export const useCart = () => {
       return;
     }
 
-    if (!requireAuth()) {
+    if (!isAuthenticated) {
       dispatch({
         type: "FAILURE",
         payload: "Vui lòng đăng nhập để xem giỏ hàng",
@@ -170,7 +170,7 @@ export const useCart = () => {
           payload: error.message || "Không thể tải giỏ hàng",
         });
       });
-  }, [authLoading, requireAuth, syncItems]);
+  }, [authLoading, isAuthenticated, syncItems]);
 
   useEffect(() => {
     fetchCart();

@@ -22,6 +22,16 @@ import SettingsPage from "@/pages/Settings/Settings";
 import TrackingPage from "@/pages/Tracking/Tracking";
 import AuthDialog from "@/components/AuthDialog/AuthDialog";
 
+import AdminLayout from '@/layouts/AdminLayout/AdminLayout'
+import MenuItemsPage from '@/pages/Admin/MenuItemsPage'
+import UsersPage from '@/pages/Admin/UsersPage'
+import DashboardPage from '@/pages/Admin/DashboardPage'
+import TablesPage from '@/pages/admin/TablesPage'
+import AdminOrdersPage from '@/pages/admin/OrdersPage'
+import ReservationsPage from "./pages/Admin/ReservationsPage";
+
+import ProtectedRoute from '@/components/ProtectedRoute'
+
 const router = createBrowserRouter([
   {
     path: "/",
@@ -40,6 +50,22 @@ const router = createBrowserRouter([
       { path: "orders", element: <OrdersPage /> },
       { path: "settings", element: <SettingsPage /> },
       { path: "tracking", element: <TrackingPage /> },
+    ],
+  },
+  {
+    path: '/admin',
+    element: (
+      <ProtectedRoute requireAdmin>
+        <AdminLayout />
+      </ProtectedRoute>
+    ),
+    children: [
+      { path: 'dashboard', element: <DashboardPage /> },
+      { path: 'orders', element: <AdminOrdersPage /> },
+      { path: 'reservations', element: <ReservationsPage /> },
+      { path: 'menu', element: <MenuItemsPage /> },
+      { path: 'tables', element: <TablesPage /> },
+      { path: 'users', element: <UsersPage /> },
     ],
   },
 ]);

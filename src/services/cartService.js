@@ -25,7 +25,7 @@ const withFallback = async (apiCall, mockCall) => {
 
 export const getActiveCart = () => {
   return withFallback(
-    () => apiClient.get("/carts/me"),
+    () => apiClient.get("/api/carts/me"),
     () => mockCartApi.getCart()
   );
 };
@@ -36,7 +36,7 @@ export const addItemToActiveCart = (payload) => {
   }
   return withFallback(
     () =>
-      apiClient.post("/carts/me/items", {
+      apiClient.post("/api/carts/me/items", {
         body: pickBody(payload),
       }),
     () => mockCartApi.addItem(payload)
@@ -49,7 +49,7 @@ export const updateActiveCartItem = (itemId, quantity) => {
   }
   return withFallback(
     () =>
-      apiClient.put(`/carts/me/items/${itemId}`, {
+      apiClient.put(`/api/carts/me/items/${itemId}`, {
         body: { quantity },
       }),
     () => mockCartApi.updateItem(itemId, quantity)
@@ -61,7 +61,7 @@ export const removeActiveCartItem = (itemId) => {
     throw new Error("Thiếu mã món ăn trong giỏ");
   }
   return withFallback(
-    () => apiClient.delete(`/carts/me/items/${itemId}`),
+    () => apiClient.delete(`/api/carts/me/items/${itemId}`),
     () => mockCartApi.removeItem(itemId)
   );
 };
@@ -69,7 +69,7 @@ export const removeActiveCartItem = (itemId) => {
 export const updateCartDetails = (body) => {
   return withFallback(
     () =>
-      apiClient.put("/carts/me/details", {
+      apiClient.put("/api/carts/me/details", {
         body,
       }),
     () => mockCartApi.updateDetails(body)

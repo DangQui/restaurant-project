@@ -1,19 +1,49 @@
 const BASE_URL = (
-  import.meta.env.VITE_ORDER_SERVICE_URL || "http://localhost:3001/api/"
+  import.meta.env.VITE_ORDER_SERVICE_URL || "http://localhost:3001/"
 ).replace(/(?<!:)\/\/+/g, "/");
 
 let AUTH_TOKEN = null;
 
+// Đồng bộ token từ localStorage khi module được load
+const initToken = () => {
+  try {
+    const savedToken = localStorage.getItem('access_token');
+    if (savedToken) {
+      AUTH_TOKEN = savedToken;
+    }
+  } catch (error) {
+    console.warn('Failed to load token from localStorage:', error);
+  }
+};
+
+// Khởi tạo token ngay khi module được load
+initToken();
+
 export const setAuthToken = (token) => {
   AUTH_TOKEN = token || null;
+  if (token) {
+    try {
+      localStorage.setItem('access_token', token);
+    } catch (error) {
+      console.warn('Failed to save token to localStorage:', error);
+    }
+  } else {
+    try {
+      localStorage.removeItem('access_token');
+    } catch (error) {
+      console.warn('Failed to remove token from localStorage:', error);
+    }
+  }
 };
 
 const buildHeaders = () => {
   const headers = {
     "Content-Type": "application/json",
   };
-  if (AUTH_TOKEN) {
-    headers.Authorization = `Bearer ${AUTH_TOKEN}`;
+  // Lấy token từ localStorage mỗi lần request để đảm bảo luôn có token mới nhất
+  const token = AUTH_TOKEN || localStorage.getItem('access_token');
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
   }
   return headers;
 };
