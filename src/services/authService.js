@@ -1,5 +1,5 @@
 const AUTH_BASE_URL = (
-  import.meta.env.VITE_AUTH_SERVICE_URL || "http://localhost:3003/api/auth"
+  import.meta.env.VITE_AUTH_SERVICE_URL || "http://localhost:3003"
 ).replace(/(?<!:)\/\/+/g, "/");
 
 const request = async (method, path, body) => {
