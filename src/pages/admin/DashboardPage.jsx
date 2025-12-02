@@ -4,10 +4,21 @@ import { getOrders } from '@/api/orderApi'
 import { getMenuItems } from '@/api/menuApi'
 import {
     getReservations,
-    updateReservation,
-    deleteReservation,
-    getAvailableTables,
 } from '@/api/reservationApi'
+
+// ==== RECHARTS ====
+import {
+    LineChart,
+    Line,
+    XAxis,
+    YAxis,
+    Tooltip,
+    CartesianGrid,
+    ResponsiveContainer,
+    Legend,
+    BarChart,
+    Bar,
+} from 'recharts'
 
 // Hàm tính tổng tiền 1 order (copy logic giống OrdersPage cho đồng nhất)
 const calcOrderTotal = (order) => {
@@ -25,6 +36,77 @@ const calcOrderTotal = (order) => {
     }
 
     return 0
+}
+
+// ===== Helper build data cho chart doanh thu =====
+const buildRevenueData = (orders, mode = 'day') => {
+    if (!Array.isArray(orders)) return []
+
+    const map = {}
+
+    orders.forEach((o) => {
+        if (!o.createdAt) return
+        const d = new Date(o.createdAt)
+        if (Number.isNaN(d.getTime())) return
+
+        let key
+        if (mode === 'month') {
+            // nhóm theo tháng YYYY-MM
+            const y = d.getFullYear()
+            const m = String(d.getMonth() + 1).padStart(2, '0')
+            key = `${y}-${m}`
+        } else {
+            // nhóm theo ngày YYYY-MM-DD
+            key = d.toISOString().slice(0, 10)
+        }
+
+        map[key] = (map[key] || 0) + calcOrderTotal(o)
+    })
+
+    let arr = Object.entries(map).map(([label, total]) => ({
+        label,
+        total,
+    }))
+
+    // sort theo label (thời gian)
+    arr.sort((a, b) => a.label.localeCompare(b.label))
+
+    if (mode === 'day') {
+        // chỉ lấy 7 điểm gần nhất cho gọn
+        arr = arr.slice(-7)
+    } else if (mode === 'month') {
+        // lấy 6 tháng gần nhất
+        arr = arr.slice(-6)
+    }
+
+    return arr
+}
+
+// ===== Helper build data cho chart trạng thái đơn =====
+const buildOrderStatusData = (orders) => {
+    if (!Array.isArray(orders)) return []
+
+    const map = {}
+
+    orders.forEach((o) => {
+        const status = (o.status || 'unknown').toLowerCase()
+        map[status] = (map[status] || 0) + 1
+    })
+
+    const labelMap = {
+        pending: 'Pending',
+        confirmed: 'Confirmed',
+        serving: 'Serving',
+        completed: 'Completed',
+        cancelled: 'Cancelled',
+        unknown: 'Khác',
+    }
+
+    return Object.entries(map).map(([status, count]) => ({
+        status: labelMap[status] || status,
+        rawStatus: status,
+        count,
+    }))
 }
 
 const DashboardPage = () => {
@@ -45,6 +127,12 @@ const DashboardPage = () => {
         pendingReservations: 0,
     })
 
+    // ==== STATE CHO BIỂU ĐỒ ====
+    // mode: 'day' = theo ngày (7 ngày gần nhất), 'month' = theo tháng (6 tháng gần nhất)
+    const [revenueMode, setRevenueMode] = useState('day')
+    const [revenueData, setRevenueData] = useState([])
+    const [orderStatusData, setOrderStatusData] = useState([])
+
     const loadDashboard = async () => {
         try {
             setLoading(true)
@@ -57,6 +145,7 @@ const DashboardPage = () => {
                 : Array.isArray(ordersData?.data)
                     ? ordersData.data
                     : []
+
             // 2) Reservations
             const reservationsData = await getReservations({})
             const resArr = Array.isArray(reservationsData)
@@ -130,6 +219,12 @@ const DashboardPage = () => {
         loadDashboard()
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
+
+    // Khi orders hoặc revenueMode đổi -> build lại data chart
+    useEffect(() => {
+        setRevenueData(buildRevenueData(orders, revenueMode))
+        setOrderStatusData(buildOrderStatusData(orders))
+    }, [orders, revenueMode])
 
     // Lấy top 5 orders mới nhất
     const latestOrders = [...orders]
@@ -333,6 +428,262 @@ const DashboardPage = () => {
                     </div>
                     <div style={{ marginTop: 6, fontSize: 13, color: '#fca5a5' }}>
                         Tổng số món hiện có trong menu
+                    </div>
+                </div>
+            </div>
+
+            {/* ==== KHU VỰC BIỂU ĐỒ ==== */}
+            <div
+                style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1.4fr)',
+                    gap: 20,
+                    marginBottom: 24,
+                }}
+            >
+                {/* Biểu đồ doanh thu theo thời gian */}
+                <div
+                    style={{
+                        background: '#020617',
+                        borderRadius: 16,
+                        border: '1px solid #1f2937',
+                        padding: 16,
+                        boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+                    }}
+                >
+                    <div
+                        style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: 10,
+                        }}
+                    >
+                        <div>
+                            <h2
+                                style={{
+                                    margin: 0,
+                                    fontSize: 18,
+                                    fontWeight: 600,
+                                    color: '#f9fafb',
+                                }}
+                            >
+                                Doanh thu theo thời gian
+                            </h2>
+                            <p
+                                style={{
+                                    margin: 0,
+                                    fontSize: 12,
+                                    color: '#9ca3af',
+                                }}
+                            >
+                                Xem xu hướng doanh thu theo ngày / theo tháng
+                            </p>
+                        </div>
+                        <div
+                            style={{
+                                display: 'flex',
+                                gap: 8,
+                                background: '#020617',
+                                padding: 4,
+                                borderRadius: 999,
+                                border: '1px solid #1f2937',
+                            }}
+                        >
+                            <button
+                                onClick={() => setRevenueMode('day')}
+                                style={{
+                                    padding: '4px 10px',
+                                    borderRadius: 999,
+                                    border: 'none',
+                                    fontSize: 12,
+                                    cursor: 'pointer',
+                                    background:
+                                        revenueMode === 'day' ? '#0ea5e9' : 'transparent',
+                                    color:
+                                        revenueMode === 'day' ? '#0f172a' : '#9ca3af',
+                                    fontWeight: 500,
+                                }}
+                            >
+                                7 ngày gần nhất
+                            </button>
+                            <button
+                                onClick={() => setRevenueMode('month')}
+                                style={{
+                                    padding: '4px 10px',
+                                    borderRadius: 999,
+                                    border: 'none',
+                                    fontSize: 12,
+                                    cursor: 'pointer',
+                                    background:
+                                        revenueMode === 'month' ? '#0ea5e9' : 'transparent',
+                                    color:
+                                        revenueMode === 'month' ? '#0f172a' : '#9ca3af',
+                                    fontWeight: 500,
+                                }}
+                            >
+                                6 tháng gần nhất
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style={{ width: '100%', height: 260 }}>
+                        {revenueData.length === 0 ? (
+                            <div
+                                style={{
+                                    textAlign: 'center',
+                                    color: '#6b7280',
+                                    fontSize: 13,
+                                    paddingTop: 40,
+                                }}
+                            >
+                                Chưa có dữ liệu để hiển thị
+                            </div>
+                        ) : (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <LineChart data={revenueData}>
+                                    <CartesianGrid
+                                        strokeDasharray="3 3"
+                                        stroke="#1f2937"
+                                        opacity={0.8}
+                                    />
+                                    <XAxis
+                                        dataKey="label"
+                                        stroke="#9ca3af"
+                                        tick={{ fontSize: 12 }}
+                                    />
+                                    <YAxis
+                                        stroke="#9ca3af"
+                                        tick={{ fontSize: 12 }}
+                                        tickFormatter={(v) =>
+                                            v >= 1_000_000
+                                                ? `${(v / 1_000_000).toFixed(1)}tr`
+                                                : v.toLocaleString('vi-VN')
+                                        }
+                                    />
+                                    <Tooltip
+                                        cursor={{ fill: '#020617', opacity: 0.3 }}
+                                        contentStyle={{
+                                            background: '#020617',
+                                            border: '1px solid #1f2937',
+                                            borderRadius: 8,
+                                            fontSize: 12,
+                                        }}
+                                        formatter={(value) =>
+                                            `${Number(value).toLocaleString('vi-VN')} ₫`
+                                        }
+                                        labelStyle={{ color: '#e5e7eb' }}
+                                    />
+                                    {/* <Legend
+                                        wrapperStyle={{
+                                            fontSize: 12,
+                                            color: '#9ca3af',
+                                        }}
+                                    /> */}
+                                    <Line
+                                        type="monotone"
+                                        dataKey="total"
+                                        name="Doanh thu"
+                                        stroke="#22c55e"
+                                        strokeWidth={2}
+                                        dot={{ r: 3, strokeWidth: 1 }}
+                                        activeDot={{ r: 5 }}
+                                    />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        )}
+                    </div>
+                </div>
+
+                {/* Biểu đồ số đơn theo trạng thái */}
+                <div
+                    style={{
+                        background: '#020617',
+                        borderRadius: 16,
+                        border: '1px solid #1f2937',
+                        padding: 16,
+                        boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+                    }}
+                >
+                    <div
+                        style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: 10,
+                        }}
+                    >
+                        <h2
+                            style={{
+                                margin: 0,
+                                fontSize: 18,
+                                fontWeight: 600,
+                                color: '#f9fafb',
+                            }}
+                        >
+                            Trạng thái đơn hàng
+                        </h2>
+                        <span style={{ fontSize: 12, color: '#9ca3af' }}>
+                            Phân bố số lượng theo trạng thái
+                        </span>
+                    </div>
+
+                    <div style={{ width: '100%', height: 260 }}>
+                        {orderStatusData.length === 0 ? (
+                            <div
+                                style={{
+                                    textAlign: 'center',
+                                    color: '#6b7280',
+                                    fontSize: 13,
+                                    paddingTop: 40,
+                                }}
+                            >
+                                Chưa có dữ liệu để hiển thị
+                            </div>
+                        ) : (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={orderStatusData}>
+                                    <CartesianGrid
+                                        strokeDasharray="3 3"
+                                        stroke="#1f2937"
+                                        opacity={0.8}
+                                    />
+                                    <XAxis
+                                        dataKey="status"
+                                        stroke="#9ca3af"
+                                        tick={{ fontSize: 12 }}
+                                    />
+                                    <YAxis
+                                        stroke="#9ca3af"
+                                        tick={{ fontSize: 12 }}
+                                        allowDecimals={false}
+                                    />
+                                    <Tooltip
+                                        cursor={{ fill: '#020617', opacity: 0.3 }}
+                                        contentStyle={{
+                                            background: '#020617',
+                                            border: '1px solid #1f2937',
+                                            borderRadius: 8,
+                                            fontSize: 12,
+                                        }}
+                                        labelStyle={{ color: '#e5e7eb' }}
+                                        formatter={(value) => `${value} đơn`}
+                                    />
+                                    <Legend
+                                        wrapperStyle={{
+                                            fontSize: 12,
+                                            color: '#9ca3af',
+                                        }}
+                                    />
+                                    <Bar
+                                        dataKey="count"
+                                        name="Số đơn"
+                                        fill="#0ea5e9"
+                                        radius={[6, 6, 0, 0]}
+                                    />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        )}
                     </div>
                 </div>
             </div>

@@ -4,13 +4,13 @@ import { axiosClient } from './axiosClient'
 export const getMenuItems = (params) =>
     axiosClient
         .get('/orders/menu-items', { params })
-        .then((res) => res.data.data || []) 
+        .then((res) => res.data)
 
 // Lấy 1 món (nếu cần)
 export const getMenuItemById = (id) =>
     axiosClient
         .get(`/orders/menu-items/${id}`)
-        .then((res) => res.data.data || res.data) 
+        .then((res) => res.data.data || res.data)
 
 // Tạo món mới
 export const createMenuItem = (data) =>

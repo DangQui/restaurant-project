@@ -53,13 +53,12 @@ const MenuItemsPage = () => {
             setLoading(true)
             setError(null)
 
-            // gọi API có phân trang
             const res = await getMenuItems({
                 page: pageParam,
                 limit: PAGE_SIZE,
             })
+            // res = { data: [...], pagination: {...}, fromCache: false }
 
-            // Res có thể là object { data, pagination, fromCache } hoặc array
             const list = Array.isArray(res?.data)
                 ? res.data
                 : Array.isArray(res)
@@ -70,13 +69,17 @@ const MenuItemsPage = () => {
 
             const pg = res?.pagination
             if (pg) {
+                const total = pg.total ?? list.length
+                const totalPages =
+                    pg.totalPages ?? Math.ceil(total / (pg.limit || PAGE_SIZE))
+
                 setPagination({
-                    total: pg.total ?? list.length,
-                    totalPages: pg.totalPages ?? 1,
+                    total,
+                    totalPages,
                 })
                 setPage(pg.page ?? pageParam)
             } else {
-                // fallback khi không có pagination từ BE
+                // fallback khi BE không trả pagination
                 setPagination({
                     total: list.length,
                     totalPages: 1,
@@ -90,6 +93,7 @@ const MenuItemsPage = () => {
             setLoading(false)
         }
     }
+
 
     useEffect(() => {
         fetchItems(1)

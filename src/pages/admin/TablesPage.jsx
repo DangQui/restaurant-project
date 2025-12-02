@@ -765,57 +765,132 @@ const TablesPage = () => {
                     style={{
                         position: 'fixed',
                         inset: 0,
-                        background: 'rgba(0,0,0,0.6)',
+                        background: 'rgba(15,23,42,0.85)',
                         display: 'flex',
                         justifyContent: 'center',
                         alignItems: 'center',
                         zIndex: 1000,
+                        backdropFilter: 'blur(6px)',
                     }}
-                    onClick={() =>
-                        !creatingOrder && setShowOrderModal(false)
-                    }
+                    onClick={() => !creatingOrder && setShowOrderModal(false)}
                 >
                     <div
                         style={{
-                            background: '#ffffff',
-                            borderRadius: 16,
+                            background:
+                                'radial-gradient(circle at top, #1f2937 0, #020617 55%, #000 100%)',
+                            borderRadius: 18,
                             width: 'min(480px,95vw)',
-                            padding: 20,
-                            color: "black"
+                            padding: 22,
+                            color: '#e5e7eb',
+                            boxShadow:
+                                '0 24px 60px rgba(0,0,0,0.85), 0 0 0 1px rgba(148,163,184,0.28)',
+                            border: '1px solid rgba(30,64,175,0.45)',
+                            position: 'relative',
+                            maxHeight: '88vh',
+                            overflowY: 'auto',
                         }}
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <h2
+                        {/* nút đóng */}
+                        <button
+                            type="button"
+                            onClick={() => !creatingOrder && setShowOrderModal(false)}
                             style={{
-                                margin: 0,
-                                marginBottom: 8,
-                                fontSize: 20,
-                                fontWeight: 700,
+                                position: 'absolute',
+                                top: 10,
+                                right: 12,
+                                width: 28,
+                                height: 28,
+                                borderRadius: '999px',
+                                border: '1px solid #334155',
+                                background: 'rgba(15,23,42,0.9)',
+                                color: '#9ca3af',
+                                fontSize: 16,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: creatingOrder ? 'default' : 'pointer',
+                                transition: 'all 0.16s ease',
                             }}
-                        >
-                            Tạo order cho bàn {selectedTable.tableNumber}
-                        </h2>
-                        <p
-                            style={{
-                                margin: '0 0 14px',
-                                fontSize: 13,
-                                color: '#6b7280',
+                            onMouseOver={(e) => {
+                                if (creatingOrder) return
+                                e.target.style.background = '#ef4444'
+                                e.target.style.color = '#f9fafb'
+                                e.target.style.borderColor = '#b91c1c'
                             }}
+                            onMouseOut={(e) => {
+                                e.target.style.background = 'rgba(15,23,42,0.9)'
+                                e.target.style.color = '#9ca3af'
+                                e.target.style.borderColor = '#334155'
+                            }}
+                            disabled={creatingOrder}
                         >
-                            Loại order:{' '}
-                            <b>Ăn tại quán (dine-in)</b> – sau khi tạo,
-                            bàn sẽ chuyển sang trạng thái{' '}
-                            <b>“Đang sử dụng”</b>.
-                        </p>
+                            ×
+                        </button>
+
+                        {/* header */}
+                        <div style={{ marginBottom: 16 }}>
+                            <div
+                                style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 8,
+                                    padding: '4px 10px',
+                                    borderRadius: 999,
+                                    background: 'rgba(22,163,74,0.1)',
+                                    border: '1px solid rgba(34,197,94,0.4)',
+                                    marginBottom: 8,
+                                }}
+                            >
+                                <span role="img" aria-label="table">
+                                    🍽️
+                                </span>
+                                <span
+                                    style={{
+                                        fontSize: 11,
+                                        letterSpacing: 0.6,
+                                        textTransform: 'uppercase',
+                                        color: '#bbf7d0',
+                                        fontWeight: 600,
+                                    }}
+                                >
+                                    Bàn {selectedTable.tableNumber}
+                                </span>
+                            </div>
+
+                            <h2
+                                style={{
+                                    margin: 0,
+                                    marginBottom: 4,
+                                    fontSize: 20,
+                                    fontWeight: 700,
+                                    color: '#f9fafb',
+                                }}
+                            >
+                                Tạo order cho bàn {selectedTable.tableNumber}
+                            </h2>
+                            <p
+                                style={{
+                                    margin: 0,
+                                    fontSize: 13,
+                                    color: '#9ca3af',
+                                }}
+                            >
+                                Loại order: <b>Ăn tại quán (dine-in)</b> – sau khi tạo, bàn sẽ chuyển sang
+                                trạng thái <b>“Đang sử dụng”</b>.
+                            </p>
+                        </div>
 
                         <form onSubmit={handleCreateOrder}>
-                            <div style={{ marginBottom: 10 }}>
+                            {/* Tên khách */}
+                            <div style={{ marginBottom: 12 }}>
                                 <label
                                     style={{
                                         display: 'block',
-                                        marginBottom: 4,
+                                        marginBottom: 6,
                                         fontSize: 13,
                                         fontWeight: 600,
+                                        color: '#e5e7eb',
                                     }}
                                 >
                                     Tên khách (nếu có)
@@ -827,21 +902,35 @@ const TablesPage = () => {
                                     style={{
                                         width: '100%',
                                         padding: '8px 10px',
-                                        borderRadius: 8,
-                                        border: '1px solid #d1d5db',
+                                        borderRadius: 10,
+                                        border: '1px solid #1f2937',
                                         fontSize: 14,
+                                        backgroundColor: 'rgba(15,23,42,0.95)',
+                                        color: '#e5e7eb',
+                                        outline: 'none',
+                                        transition: 'all 0.15s ease',
+                                    }}
+                                    onFocus={(e) => {
+                                        e.target.style.borderColor = '#3b82f6'
+                                        e.target.style.boxShadow = '0 0 0 1px rgba(59,130,246,0.6)'
+                                    }}
+                                    onBlur={(e) => {
+                                        e.target.style.borderColor = '#1f2937'
+                                        e.target.style.boxShadow = 'none'
                                     }}
                                     placeholder="VD: Anh Nam"
                                 />
                             </div>
 
-                            <div style={{ marginBottom: 10 }}>
+                            {/* SĐT */}
+                            <div style={{ marginBottom: 12 }}>
                                 <label
                                     style={{
                                         display: 'block',
-                                        marginBottom: 4,
+                                        marginBottom: 6,
                                         fontSize: 13,
                                         fontWeight: 600,
+                                        color: '#e5e7eb',
                                     }}
                                 >
                                     SĐT khách (nếu có)
@@ -853,21 +942,35 @@ const TablesPage = () => {
                                     style={{
                                         width: '100%',
                                         padding: '8px 10px',
-                                        borderRadius: 8,
-                                        border: '1px solid #d1d5db',
+                                        borderRadius: 10,
+                                        border: '1px solid #1f2937',
                                         fontSize: 14,
+                                        backgroundColor: 'rgba(15,23,42,0.95)',
+                                        color: '#e5e7eb',
+                                        outline: 'none',
+                                        transition: 'all 0.15s ease',
+                                    }}
+                                    onFocus={(e) => {
+                                        e.target.style.borderColor = '#3b82f6'
+                                        e.target.style.boxShadow = '0 0 0 1px rgba(59,130,246,0.6)'
+                                    }}
+                                    onBlur={(e) => {
+                                        e.target.style.borderColor = '#1f2937'
+                                        e.target.style.boxShadow = 'none'
                                     }}
                                     placeholder="VD: 09xx..."
                                 />
                             </div>
 
-                            <div style={{ marginBottom: 14 }}>
+                            {/* Ghi chú */}
+                            <div style={{ marginBottom: 16 }}>
                                 <label
                                     style={{
                                         display: 'block',
-                                        marginBottom: 4,
+                                        marginBottom: 6,
                                         fontSize: 13,
                                         fontWeight: 600,
+                                        color: '#e5e7eb',
                                     }}
                                 >
                                     Ghi chú
@@ -880,15 +983,28 @@ const TablesPage = () => {
                                     style={{
                                         width: '100%',
                                         padding: '8px 10px',
-                                        borderRadius: 8,
-                                        border: '1px solid #d1d5db',
+                                        borderRadius: 10,
+                                        border: '1px solid #1f2937',
                                         fontSize: 14,
+                                        backgroundColor: 'rgba(15,23,42,0.95)',
+                                        color: '#e5e7eb',
                                         resize: 'vertical',
+                                        outline: 'none',
+                                        transition: 'all 0.15s ease',
+                                    }}
+                                    onFocus={(e) => {
+                                        e.target.style.borderColor = '#3b82f6'
+                                        e.target.style.boxShadow = '0 0 0 1px rgba(59,130,246,0.6)'
+                                    }}
+                                    onBlur={(e) => {
+                                        e.target.style.borderColor = '#1f2937'
+                                        e.target.style.boxShadow = 'none'
                                     }}
                                     placeholder="VD: cần thêm 1 ghế, chuẩn bị chén bát..."
                                 />
                             </div>
 
+                            {/* buttons */}
                             <div
                                 style={{
                                     display: 'flex',
@@ -899,18 +1015,29 @@ const TablesPage = () => {
                             >
                                 <button
                                     type="button"
-                                    onClick={() =>
-                                        !creatingOrder &&
-                                        setShowOrderModal(false)
-                                    }
+                                    onClick={() => !creatingOrder && setShowOrderModal(false)}
                                     style={{
-                                        padding: '8px 16px',
-                                        borderRadius: 8,
-                                        border: '1px solid #d1d5db',
-                                        background: '#f3f4f6',
+                                        padding: '8px 15px',
+                                        borderRadius: 999,
+                                        border: '1px solid #374151',
+                                        background: 'linear-gradient(135deg,#020617,#020617)',
                                         fontSize: 14,
-                                        fontWeight: 600,
+                                        fontWeight: 500,
+                                        color: '#e5e7eb',
+                                        cursor: creatingOrder ? 'default' : 'pointer',
+                                        transition: 'all 0.15s ease',
                                     }}
+                                    onMouseOver={(e) => {
+                                        if (creatingOrder) return
+                                        e.target.style.background = '#111827'
+                                        e.target.style.borderColor = '#4b5563'
+                                    }}
+                                    onMouseOut={(e) => {
+                                        e.target.style.background =
+                                            'linear-gradient(135deg,#020617,#020617)'
+                                        e.target.style.borderColor = '#374151'
+                                    }}
+                                    disabled={creatingOrder}
                                 >
                                     Hủy
                                 </button>
@@ -919,26 +1046,65 @@ const TablesPage = () => {
                                     disabled={creatingOrder}
                                     style={{
                                         padding: '8px 20px',
-                                        borderRadius: 8,
+                                        borderRadius: 999,
                                         border: 'none',
-                                        background: '#16a34a',
-                                        color: '#ffffff',
+                                        background: 'linear-gradient(135deg,#16a34a,#15803d)',
+                                        color: '#f9fafb',
                                         fontSize: 14,
                                         fontWeight: 600,
-                                        cursor: creatingOrder
-                                            ? 'default'
-                                            : 'pointer',
+                                        cursor: creatingOrder ? 'default' : 'pointer',
+                                        transition: 'all 0.15s ease',
+                                        opacity: creatingOrder ? 0.85 : 1,
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: 6,
                                     }}
+                                // onMouseOver={(e) => {
+                                //     if (creatingOrder) return
+                                //     e.target.style.transform = 'translateY(-1px)'
+                                //     e.target.style.boxShadow =
+                                //         '0 14px 32px rgba(22,163,74,0.7)'
+                                // }}
+                                // onMouseOut={(e) => {
+                                //     e.target.style.transform = 'translateY(0)'
+                                //     e.target.style.boxShadow =
+                                //         '0 10px 25px rgba(22,163,74,0.55)'
+                                // }}
                                 >
-                                    {creatingOrder
-                                        ? 'Đang tạo...'
-                                        : 'Tạo order'}
+                                    {creatingOrder ? (
+                                        <>
+                                            <span
+                                                style={{
+                                                    width: 14,
+                                                    height: 14,
+                                                    borderRadius: '999px',
+                                                    border: '2px solid rgba(220,252,231,0.5)',
+                                                    borderTopColor: '#dcfce7',
+                                                    animation: 'spin 0.7s linear infinite',
+                                                }}
+                                            />
+                                            Đang tạo...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span>➕</span> Tạo order
+                                        </>
+                                    )}
                                 </button>
                             </div>
+
+                            {/* keyframes cho spinner */}
+                            <style>
+                                {`@keyframes spin {
+              from { transform: rotate(0deg); }
+              to { transform: rotate(360deg); }
+          }`}
+                            </style>
                         </form>
                     </div>
                 </div>
             )}
+
 
             {/* Modal chi tiết order - DÙNG LẠI bên OrdersPage */}
             <OrderDetailModal

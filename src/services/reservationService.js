@@ -4,24 +4,28 @@ const RESERVATION_BASE_URL = (
 ).replace(/(?<!:)\/\/+/g, "/");
 
 // Lấy token từ localStorage (đồng bộ với AuthContext)
+// const getAuthToken = () => {
+//   try {
+//     const stored = localStorage.getItem("wowwraps_auth");
+//     if (stored) {
+//       const parsed = JSON.parse(stored);
+//       return parsed?.token || null;
+//     }
+//   } catch {
+//     return null;
+//   }
+//   return null;
+// };
 const getAuthToken = () => {
-  try {
-    const stored = localStorage.getItem("wowwraps_auth");
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      return parsed?.token || null;
-    }
-  } catch {
-    return null;
-  }
-  return null;
-};
+  return localStorage.getItem('access_token')
+}
 
 const buildHeaders = () => {
   const headers = {
     "Content-Type": "application/json",
   };
   const token = getAuthToken();
+  console.log('token', token);
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
@@ -66,6 +70,40 @@ const request = async (method, path, { params, body } = {}) => {
 
   return response.json();
 };
+
+// const request = async (method, path, { params, body } = {}) => {
+//   const url = buildUrl(path, params);
+
+//   console.log('[reservationService] Request:', method, url.toString(), { body });
+
+//   const response = await fetch(url, {
+//     method,
+//     headers: buildHeaders(),
+//     body: body ? JSON.stringify(body) : undefined,
+//   });
+
+//   const text = await response.text(); // đọc raw text
+
+//   if (!response.ok) {
+//     console.error('[reservationService] Error response:', response.status, text);
+
+//     let errorPayload = {};
+//     try {
+//       errorPayload = JSON.parse(text);
+//     } catch { }
+
+//     const message =
+//       errorPayload.error ||
+//       errorPayload.message ||
+//       `Request failed with status ${response.status}`;
+
+//     throw new Error(message);
+//   }
+
+//   if (!text) return null;
+//   return JSON.parse(text);
+// };
+
 
 const reservationApiClient = {
   get: (path, options) => request("GET", path, options),
@@ -134,7 +172,8 @@ export const createReservation = async (payload) => {
         reservationDate,
         reservationTime,
         durationMinutes,
-        notes: notes || null,
+        notes: notes || "",
+        status: 'pending',
       },
     });
 
