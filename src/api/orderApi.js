@@ -4,23 +4,23 @@ import { axiosClient } from './axiosClient'
 // Lấy tất cả orders, có filter query (orderType, status, tableId, userId,...)
 // API Gateway đã có prefix /orders, nên chỉ cần gọi /orders (không cần /orders/orders)
 export const getOrders = (params) =>
-    axiosClient.get('/orders', { params }).then((res) => res.data)
+    axiosClient.get('/orders/orders', { params }).then((res) => res.data)
 
 export const getOrderById = (id) =>
-    axiosClient.get(`/orders/${id}`).then((res) => res.data)
+    axiosClient.get(`/orders/orders/${id}`).then((res) => res.data)
 
 export const createOrder = (data) =>
-    axiosClient.post('/orders', data).then((res) => res.data)
+    axiosClient.post('/orders/orders', data).then((res) => res.data)
 
 export const updateOrder = (id, data) =>
-    axiosClient.put(`/orders/${id}`, data).then((res) => res.data)
+    axiosClient.put(`/orders/orders/${id}`, data).then((res) => res.data)
 
 export const deleteOrder = (id) =>
-    axiosClient.delete(`/orders/${id}`).then((res) => res.data)
+    axiosClient.delete(`/orders/orders/${id}`).then((res) => res.data)
 
 // -------- Order Items ----------
 export const addOrderItem = (orderId, data) =>
-    axiosClient.post(`/orders/${orderId}/items`, data).then((res) => res.data)
+    axiosClient.post(`/orders/orders/${orderId}/items`, data).then((res) => res.data)
 
 export const updateOrderItem = (orderId, itemId, data) =>
     axiosClient

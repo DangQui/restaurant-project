@@ -21,12 +21,34 @@ const UsersPage = () => {
     const [saving, setSaving] = useState(false)
     const [deletingId, setDeletingId] = useState(null)
 
-    const fetchData = async () => {
+    // 🆕 State cho phân trang
+    const [pagination, setPagination] = useState({
+        page: 1,
+        limit: 7,        // giống limit backend trả
+        total: 0,
+        totalPages: 1,
+    })
+
+    // 🆕 Hàm fetch có param page
+    const fetchData = async (page = 1) => {
         try {
             setLoading(true)
             setError(null)
-            const data = await getUsers()
-            setUsers(Array.isArray(data) ? data : [])
+
+            // 👉 Tùy getUsers định nghĩa mà bạn gọi:
+            // Nếu getUsers nhận params: getUsers({ page, limit })
+            const res = await getUsers({ page, limit: pagination.limit })
+
+            // res = { data: [...], pagination: {...} }
+            const list = Array.isArray(res?.data) ? res.data : []
+            setUsers(list)
+
+            if (res?.pagination) {
+                setPagination((prev) => ({
+                    ...prev,
+                    ...res.pagination, // { total, page, limit, totalPages }
+                }))
+            }
         } catch (err) {
             console.error(err)
             setError(err.message || 'Không tải được danh sách người dùng')
@@ -36,7 +58,8 @@ const UsersPage = () => {
     }
 
     useEffect(() => {
-        fetchData()
+        fetchData(1)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     const openCreate = () => {
@@ -78,7 +101,6 @@ const UsersPage = () => {
                 role: form.role,
             }
 
-            // Nếu tạo mới hoặc có password mới => gửi password
             if (!editing || form.password) {
                 payload.password = form.password
             }
@@ -91,7 +113,8 @@ const UsersPage = () => {
 
             setShowModal(false)
             setEditing(null)
-            await fetchData()
+            // 🆕 Sau khi lưu xong, load lại page hiện tại
+            await fetchData(pagination.page)
         } catch (err) {
             console.error(err)
             setError(err.response?.data?.message || 'Lưu người dùng thất bại')
@@ -105,7 +128,8 @@ const UsersPage = () => {
         try {
             setDeletingId(id)
             await deleteUser(id)
-            await fetchData()
+            // 🆕 Load lại page hiện tại
+            await fetchData(pagination.page)
         } catch (err) {
             console.error(err)
             setError(err.response?.data?.message || 'Xóa người dùng thất bại')
@@ -122,6 +146,12 @@ const UsersPage = () => {
             u.role?.toLowerCase().includes(q)
         )
     })
+
+    // 🆕 Đổi trang
+    const handlePageChange = (newPage) => {
+        if (newPage < 1 || newPage > pagination.totalPages) return
+        fetchData(newPage)
+    }
 
     return (
         <div>
@@ -369,6 +399,56 @@ const UsersPage = () => {
                         </tbody>
                     </table>
                 </div>
+
+                {/* 🆕 Thanh phân trang */}
+                <div
+                    style={{
+                        marginTop: 12,
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        fontSize: 13,
+                        color: '#9ca3af',
+                    }}
+                >
+                    <span>
+                        Trang {pagination.page}/{pagination.totalPages} — Tổng {pagination.total} user
+                    </span>
+
+                    <div style={{ display: 'flex', gap: 6 }}>
+                        <button
+                            onClick={() => handlePageChange(pagination.page - 1)}
+                            disabled={pagination.page <= 1}
+                            style={{
+                                padding: '4px 10px',
+                                borderRadius: 9999,
+                                border: '1px solid #4b5563',
+                                background: pagination.page <= 1 ? '#111827' : '#020617',
+                                color: '#e5e7eb',
+                                cursor: pagination.page <= 1 ? 'not-allowed' : 'pointer',
+                            }}
+                        >
+                            ◀ Trước
+                        </button>
+
+                        <button
+                            onClick={() => handlePageChange(pagination.page + 1)}
+                            disabled={pagination.page >= pagination.totalPages}
+                            style={{
+                                padding: '4px 10px',
+                                borderRadius: 9999,
+                                border: '1px solid #4b5563',
+                                background:
+                                    pagination.page >= pagination.totalPages ? '#111827' : '#020617',
+                                color: '#e5e7eb',
+                                cursor:
+                                    pagination.page >= pagination.totalPages ? 'not-allowed' : 'pointer',
+                            }}
+                        >
+                            Sau ▶
+                        </button>
+                    </div>
+                </div>
             </div>
 
             {/* Modal thêm/sửa user */}
@@ -377,32 +457,37 @@ const UsersPage = () => {
                     style={{
                         position: 'fixed',
                         inset: 0,
-                        background: 'rgba(0,0,0,0.6)',
+                        background: 'rgba(0, 0, 0, 0.5)',
                         display: 'flex',
                         justifyContent: 'center',
                         alignItems: 'center',
-                        zIndex: 900,
+                        zIndex: 1000,
+                        backdropFilter: 'blur(3px)',
+                        animation: 'fadeIn 0.2s ease-in-out',
                     }}
                     onClick={() => setShowModal(false)}
                 >
                     <div
                         style={{
-                            background: '#ffffff',
-                            borderRadius: 16,
+                            background: '#fff',
+                            borderRadius: 12,
                             width: 'min(520px, 95vw)',
                             maxHeight: '90vh',
-                            padding: 24,
+                            padding: '24px 32px',
                             overflowY: 'auto',
+                            boxShadow: '0 12px 24px rgba(0,0,0,0.2)',
+                            animation: 'slideUp 0.3s ease',
                         }}
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <h2 style={{ margin: '0 0 16px', fontSize: 22, fontWeight: 700 }}>
+                        <h2 style={{ margin: '0 0 20px', fontSize: 24, fontWeight: 700, color: '#111827' }}>
                             {editing ? 'Sửa người dùng' : 'Thêm người dùng'}
                         </h2>
 
                         <form onSubmit={handleSubmit}>
-                            <div style={{ marginBottom: 12 }}>
-                                <label style={{ display: 'block', marginBottom: 4, fontWeight: 600 }}>
+                            {/* Name */}
+                            <div style={{ marginBottom: 16 }}>
+                                <label style={{ display: 'block', marginBottom: 6, fontWeight: 600, color: '#374151' }}>
                                     Họ tên
                                 </label>
                                 <input
@@ -412,15 +497,20 @@ const UsersPage = () => {
                                     required
                                     style={{
                                         width: '100%',
-                                        padding: '8px 10px',
+                                        padding: '10px 14px',
                                         borderRadius: 8,
                                         border: '1px solid #d1d5db',
+                                        outline: 'none',
+                                        transition: 'all 0.2s',
                                     }}
+                                    onFocus={(e) => e.target.style.borderColor = '#2563eb'}
+                                    onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
                                 />
                             </div>
 
-                            <div style={{ marginBottom: 12 }}>
-                                <label style={{ display: 'block', marginBottom: 4, fontWeight: 600 }}>
+                            {/* Email */}
+                            <div style={{ marginBottom: 16 }}>
+                                <label style={{ display: 'block', marginBottom: 6, fontWeight: 600, color: '#374151' }}>
                                     Email
                                 </label>
                                 <input
@@ -431,16 +521,21 @@ const UsersPage = () => {
                                     required
                                     style={{
                                         width: '100%',
-                                        padding: '8px 10px',
+                                        padding: '10px 14px',
                                         borderRadius: 8,
                                         border: '1px solid #d1d5db',
+                                        outline: 'none',
+                                        transition: 'all 0.2s',
                                     }}
+                                    onFocus={(e) => e.target.style.borderColor = '#2563eb'}
+                                    onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
                                 />
                             </div>
 
-                            <div style={{ marginBottom: 12 }}>
-                                <label style={{ display: 'block', marginBottom: 4, fontWeight: 600 }}>
-                                    Mật khẩu {editing && <span style={{ fontWeight: 400 }}>(để trống nếu không đổi)</span>}
+                            {/* Password */}
+                            <div style={{ marginBottom: 16 }}>
+                                <label style={{ display: 'block', marginBottom: 6, fontWeight: 600, color: '#374151' }}>
+                                    Mật khẩu {editing && <span style={{ fontWeight: 400, color: '#6b7280' }}>(để trống nếu không đổi)</span>}
                                 </label>
                                 <input
                                     type="password"
@@ -449,15 +544,20 @@ const UsersPage = () => {
                                     onChange={handleChange}
                                     style={{
                                         width: '100%',
-                                        padding: '8px 10px',
+                                        padding: '10px 14px',
                                         borderRadius: 8,
                                         border: '1px solid #d1d5db',
+                                        outline: 'none',
+                                        transition: 'all 0.2s',
                                     }}
+                                    onFocus={(e) => e.target.style.borderColor = '#2563eb'}
+                                    onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
                                 />
                             </div>
 
-                            <div style={{ marginBottom: 16 }}>
-                                <label style={{ display: 'block', marginBottom: 4, fontWeight: 600 }}>
+                            {/* Role */}
+                            <div style={{ marginBottom: 24 }}>
+                                <label style={{ display: 'block', marginBottom: 6, fontWeight: 600, color: '#374151' }}>
                                     Role
                                 </label>
                                 <select
@@ -466,10 +566,16 @@ const UsersPage = () => {
                                     onChange={handleChange}
                                     style={{
                                         width: '100%',
-                                        padding: '8px 10px',
+                                        padding: '10px 14px',
                                         borderRadius: 8,
                                         border: '1px solid #d1d5db',
+                                        outline: 'none',
+                                        transition: 'all 0.2s',
+                                        background: '#fff',
+                                        color: '#111827',
                                     }}
+                                    onFocus={(e) => e.target.style.borderColor = '#2563eb'}
+                                    onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
                                 >
                                     {ROLE_OPTIONS.map((r) => (
                                         <option key={r} value={r}>
@@ -479,23 +585,23 @@ const UsersPage = () => {
                                 </select>
                             </div>
 
-                            <div
-                                style={{
-                                    display: 'flex',
-                                    justifyContent: 'flex-end',
-                                    gap: 8,
-                                }}
-                            >
+                            {/* Buttons */}
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
                                 <button
                                     type="button"
                                     onClick={() => setShowModal(false)}
                                     style={{
-                                        padding: '8px 18px',
+                                        padding: '10px 20px',
                                         borderRadius: 8,
                                         border: '1px solid #d1d5db',
                                         background: '#f3f4f6',
                                         fontWeight: 600,
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s',
+                                        color: "#0b0b0bff"
                                     }}
+                                    onMouseEnter={(e) => e.target.style.background = '#e5e7eb'}
+                                    onMouseLeave={(e) => e.target.style.background = '#f3f4f6'}
                                 >
                                     Hủy
                                 </button>
@@ -503,22 +609,40 @@ const UsersPage = () => {
                                     type="submit"
                                     disabled={saving}
                                     style={{
-                                        padding: '8px 22px',
+                                        padding: '10px 24px',
                                         borderRadius: 8,
                                         border: 'none',
                                         background: '#2563eb',
-                                        color: '#ffffff',
+                                        color: '#fff',
                                         fontWeight: 600,
                                         cursor: saving ? 'default' : 'pointer',
+                                        transition: 'all 0.2s',
                                     }}
+                                    onMouseEnter={(e) => !saving && (e.target.style.background = '#1d4ed8')}
+                                    onMouseLeave={(e) => !saving && (e.target.style.background = '#2563eb')}
                                 >
                                     {saving ? 'Đang lưu...' : editing ? 'Cập nhật' : 'Tạo mới'}
                                 </button>
                             </div>
                         </form>
                     </div>
+
+                    {/* Keyframe animations */}
+                    <style>
+                        {`
+                @keyframes fadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+                @keyframes slideUp {
+                    from { transform: translateY(20px); opacity: 0; }
+                    to { transform: translateY(0); opacity: 1; }
+                }
+            `}
+                    </style>
                 </div>
             )}
+
         </div>
     )
 }

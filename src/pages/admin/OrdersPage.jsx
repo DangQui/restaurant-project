@@ -61,6 +61,14 @@ const OrdersPage = () => {
         status: '',
     })
 
+    // 🆕 Phân trang FE
+    const [pagination, setPagination] = useState({
+        page: 1,
+        limit: 10, // mỗi trang 10 order
+        total: 0,
+        totalPages: 1,
+    })
+
     // Create order modal
     const [showCreateModal, setShowCreateModal] = useState(false)
     const [createForm, setCreateForm] = useState({
@@ -98,7 +106,6 @@ const OrdersPage = () => {
     const [menuLoading, setMenuLoading] = useState(false)
     const [menuSearch, setMenuSearch] = useState('')
 
-    // Lọc menu theo tìm kiếm
     const filteredMenuItems = Array.isArray(menuItems)
         ? menuItems.filter((item) =>
             item.name.toLowerCase().includes(menuSearch.toLowerCase())
@@ -126,16 +133,32 @@ const OrdersPage = () => {
 
     const [showPaymentModal, setShowPaymentModal] = useState(false)
 
-    // -------- Fetch orders ----------
+    // -------- Fetch orders (FE pagination) ----------
     const fetchOrders = async () => {
         try {
             setLoading(true)
             setError(null)
-            const data = await getOrders({
+
+            const params = {
                 orderType: filters.orderType || undefined,
                 status: filters.status || undefined,
-            })
-            setOrders(data || [])
+            }
+
+            const res = await getOrders(params)
+
+            const list = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : [])
+
+            setOrders(list)
+
+            const total = list.length
+            const totalPages = Math.max(1, Math.ceil(total / pagination.limit))
+
+            setPagination((prev) => ({
+                ...prev,
+                page: 1,      // reset về trang 1 mỗi khi fetch lại
+                total,
+                totalPages,
+            }))
         } catch (err) {
             console.error(err)
             setError(err.message || 'Failed to load orders')
@@ -144,6 +167,13 @@ const OrdersPage = () => {
         }
     }
 
+    // Load lần đầu
+    useEffect(() => {
+        fetchOrders()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
+
+    // Khi filter đổi → fetch lại & về page 1
     useEffect(() => {
         fetchOrders()
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -410,18 +440,27 @@ const OrdersPage = () => {
     }
 
     const handlePaymentSuccess = async () => {
-        // đóng modal thanh toán
         setShowPaymentModal(false)
-
-        // reload lại orders list
         await fetchOrders()
-
-        // reload lại chi tiết order để update status
         if (selectedOrder) {
             const fresh = await getOrderById(selectedOrder.id)
             setSelectedOrder(fresh)
         }
     }
+
+    // 🆕 Đổi trang (FE)
+    const handlePageChange = (newPage) => {
+        if (newPage < 1 || newPage > pagination.totalPages) return
+        setPagination((prev) => ({
+            ...prev,
+            page: newPage,
+        }))
+    }
+
+    // 🆕 Tính danh sách order hiển thị cho page hiện tại
+    const startIndex = (pagination.page - 1) * pagination.limit
+    const endIndex = startIndex + pagination.limit
+    const pageOrders = orders.slice(startIndex, endIndex)
 
     // ===== RENDER =====
     return (
@@ -568,12 +607,10 @@ const OrdersPage = () => {
                             transition: '0.15s',
                         }}
                         onMouseEnter={(e) =>
-                            !loading &&
-                            (e.currentTarget.style.background = '#1e293b')
+                            !loading && (e.currentTarget.style.background = '#1e293b')
                         }
                         onMouseLeave={(e) =>
-                            !loading &&
-                            (e.currentTarget.style.background = '#0f172a')
+                            !loading && (e.currentTarget.style.background = '#0f172a')
                         }
                     >
                         🔄 {loading ? 'Đang tải...' : 'Làm mới'}
@@ -645,8 +682,8 @@ const OrdersPage = () => {
                                 color: '#9ca3af',
                             }}
                         >
-                            Tổng: <strong style={{ color: '#e5e7eb' }}>{orders.length}</strong>{' '}
-                            order
+                            Trang {pagination.page}/{pagination.totalPages} — Tổng{' '}
+                            <strong style={{ color: '#e5e7eb' }}>{pagination.total}</strong> order
                         </span>
                     </div>
 
@@ -694,7 +731,7 @@ const OrdersPage = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {orders.length === 0 && !loading && (
+                                {pageOrders.length === 0 && !loading && (
                                     <tr>
                                         <td
                                             colSpan={8}
@@ -709,7 +746,7 @@ const OrdersPage = () => {
                                     </tr>
                                 )}
 
-                                {orders.map((o, idx) => {
+                                {pageOrders.map((o, idx) => {
                                     const rowTotal = calcOrderTotal(o)
 
                                     const status = o.status || 'pending'
@@ -942,6 +979,63 @@ const OrdersPage = () => {
                             </tbody>
                         </table>
                     </div>
+
+                    {/* 🆕 Thanh phân trang */}
+                    <div
+                        style={{
+                            marginTop: 12,
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            fontSize: 13,
+                            color: '#9ca3af',
+                        }}
+                    >
+                        <span>
+                            Trang {pagination.page}/{pagination.totalPages} — Hiển thị tối đa{' '}
+                            {pagination.limit} order / trang
+                        </span>
+
+                        <div style={{ display: 'flex', gap: 6 }}>
+                            <button
+                                onClick={() => handlePageChange(pagination.page - 1)}
+                                disabled={pagination.page <= 1}
+                                style={{
+                                    padding: '4px 10px',
+                                    borderRadius: 9999,
+                                    border: '1px solid #4b5563',
+                                    background:
+                                        pagination.page <= 1 ? '#111827' : '#020617',
+                                    color: '#e5e7eb',
+                                    cursor:
+                                        pagination.page <= 1 ? 'not-allowed' : 'pointer',
+                                }}
+                            >
+                                ◀ Trước
+                            </button>
+
+                            <button
+                                onClick={() => handlePageChange(pagination.page + 1)}
+                                disabled={pagination.page >= pagination.totalPages}
+                                style={{
+                                    padding: '4px 10px',
+                                    borderRadius: 9999,
+                                    border: '1px solid #4b5563',
+                                    background:
+                                        pagination.page >= pagination.totalPages
+                                            ? '#111827'
+                                            : '#020617',
+                                    color: '#e5e7eb',
+                                    cursor:
+                                        pagination.page >= pagination.totalPages
+                                            ? 'not-allowed'
+                                            : 'pointer',
+                                }}
+                            >
+                                Sau ▶
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -983,7 +1077,6 @@ const OrdersPage = () => {
                 onSubmitItem={handleSubmitItem}
                 onCancelItem={resetItemState}
                 itemSubmitting={itemSubmitting}
-
                 onOpenPayment={() => setShowPaymentModal(true)}
             />
 
@@ -994,7 +1087,7 @@ const OrdersPage = () => {
                 order={selectedOrder}
                 onSuccess={handlePaymentSuccess}
             />
-        </div>
+        </div >
     )
 }
 

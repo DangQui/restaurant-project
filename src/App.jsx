@@ -21,6 +21,7 @@ import OrdersPage from "@/pages/Orders/Orders";
 import SettingsPage from "@/pages/Settings/Settings";
 import TrackingPage from "@/pages/Tracking/Tracking";
 import AuthDialog from "@/components/AuthDialog/AuthDialog";
+import BlogPage from "./pages/Blog/Blog";
 
 import AdminLayout from '@/layouts/AdminLayout/AdminLayout'
 import MenuItemsPage from '@/pages/Admin/MenuItemsPage'
@@ -40,6 +41,7 @@ const router = createBrowserRouter([
       { index: true, element: <HomePage /> },
       { path: "about", element: <AboutPage /> },
       { path: "contact", element: <ContactPage /> },
+      { path: "blog", element: <BlogPage /> },
       { path: "menu", element: <MenuPage /> },
       { path: "menu/:productId", element: <ProductPage /> },
       { path: "search", element: <SearchPage /> },

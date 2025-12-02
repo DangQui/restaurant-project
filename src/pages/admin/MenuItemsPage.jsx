@@ -7,8 +7,20 @@ import {
     deleteMenuItem,
 } from '@/api/menuApi'
 
-const TYPE_OPTIONS = ['food', 'drink', 'other']
-const CATEGORY_OPTIONS = ['breakfast', 'lunch', 'dinner', 'snack', 'other']
+// Bổ sung type / category cho khớp data thực tế
+const TYPE_OPTIONS = ['food', 'drink', 'dessert', 'other']
+const CATEGORY_OPTIONS = [
+    'breakfast',
+    'lunch',
+    'dinner',
+    'snack',
+    'starters',
+    'dessert',
+    'drink',
+    'other',
+]
+
+const PAGE_SIZE = 10
 
 const MenuItemsPage = () => {
     const [items, setItems] = useState([])
@@ -24,19 +36,53 @@ const MenuItemsPage = () => {
         category: '',
         type: '',
         description: '',
-        imageUrl: '',
+        // imageUrl: '',
     })
     const [saving, setSaving] = useState(false)
     const [deletingId, setDeletingId] = useState(null)
 
-    const fetchItems = async () => {
+    // phân trang
+    const [page, setPage] = useState(1)
+    const [pagination, setPagination] = useState({
+        total: 0,
+        totalPages: 1,
+    })
+
+    const fetchItems = async (pageParam = page) => {
         try {
             setLoading(true)
             setError(null)
 
-            const list = await getMenuItems()
-            setItems(Array.isArray(list) ? list : [])
+            // gọi API có phân trang
+            const res = await getMenuItems({
+                page: pageParam,
+                limit: PAGE_SIZE,
+            })
 
+            // Res có thể là object { data, pagination, fromCache } hoặc array
+            const list = Array.isArray(res?.data)
+                ? res.data
+                : Array.isArray(res)
+                    ? res
+                    : []
+
+            setItems(list)
+
+            const pg = res?.pagination
+            if (pg) {
+                setPagination({
+                    total: pg.total ?? list.length,
+                    totalPages: pg.totalPages ?? 1,
+                })
+                setPage(pg.page ?? pageParam)
+            } else {
+                // fallback khi không có pagination từ BE
+                setPagination({
+                    total: list.length,
+                    totalPages: 1,
+                })
+                setPage(1)
+            }
         } catch (err) {
             console.error(err)
             setError(err.message || 'Không tải được danh sách món')
@@ -46,7 +92,8 @@ const MenuItemsPage = () => {
     }
 
     useEffect(() => {
-        fetchItems()
+        fetchItems(1)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     const openCreate = () => {
@@ -57,7 +104,7 @@ const MenuItemsPage = () => {
             category: '',
             type: '',
             description: '',
-            imageUrl: '',
+            // imageUrl: '',
         })
         setShowModal(true)
     }
@@ -103,7 +150,7 @@ const MenuItemsPage = () => {
 
             setShowModal(false)
             setEditingItem(null)
-            await fetchItems()
+            await fetchItems(page) // reload trang hiện tại
         } catch (err) {
             console.error(err)
             setError(err.response?.data?.message || 'Lưu món thất bại')
@@ -117,7 +164,7 @@ const MenuItemsPage = () => {
         try {
             setDeletingId(id)
             await deleteMenuItem(id)
-            await fetchItems()
+            await fetchItems(page)
         } catch (err) {
             console.error(err)
             setError(err.response?.data?.message || 'Xóa món thất bại')
@@ -126,9 +173,15 @@ const MenuItemsPage = () => {
         }
     }
 
+    // filter search trên TRANG HIỆN TẠI
     const filtered = items.filter((it) =>
         it.name?.toLowerCase().includes(search.toLowerCase())
     )
+
+    const handlePageChange = async (newPage) => {
+        if (newPage < 1 || newPage > pagination.totalPages) return
+        await fetchItems(newPage)
+    }
 
     return (
         <div>
@@ -216,7 +269,18 @@ const MenuItemsPage = () => {
                         color: '#9ca3af',
                     }}
                 >
-                    <span>Tổng: {filtered.length} món</span>
+                    <span>
+                        Tổng:{' '}
+                        <strong style={{ color: '#e5e7eb' }}>
+                            {pagination.total}
+                        </strong>{' '}
+                        món
+                    </span>
+                    <span>
+                        Trang{' '}
+                        <strong style={{ color: '#e5e7eb' }}>{page}</strong> /{' '}
+                        {pagination.totalPages}
+                    </span>
                 </div>
 
                 <div style={{ overflowX: 'auto' }}>
@@ -381,7 +445,9 @@ const MenuItemsPage = () => {
                                                 borderRadius: 9999,
                                                 border: '1px solid #ef4444',
                                                 background:
-                                                    deletingId === it.id ? 'rgba(248,113,113,0.15)' : 'transparent',
+                                                    deletingId === it.id
+                                                        ? 'rgba(248,113,113,0.15)'
+                                                        : 'transparent',
                                                 color: '#fca5a5',
                                                 fontSize: 13,
                                                 fontWeight: 500,
@@ -396,6 +462,89 @@ const MenuItemsPage = () => {
                         </tbody>
                     </table>
                 </div>
+
+                {/* pagination */}
+                {pagination.total > 0 && (
+                    <div
+                        style={{
+                            marginTop: 12,
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            fontSize: 13,
+                            color: '#9ca3af',
+                        }}
+                    >
+                        <span>
+                            Hiển thị{' '}
+                            <strong style={{ color: '#e5e7eb' }}>
+                                {pagination.total === 0
+                                    ? 0
+                                    : (page - 1) * PAGE_SIZE + 1}
+                                -
+                                {Math.min(page * PAGE_SIZE, pagination.total)}
+                            </strong>{' '}
+                            /{' '}
+                            <strong style={{ color: '#e5e7eb' }}>
+                                {pagination.total}
+                            </strong>{' '}
+                            món
+                        </span>
+
+                        <div
+                            style={{
+                                display: 'flex',
+                                gap: 6,
+                                alignItems: 'center',
+                            }}
+                        >
+                            <button
+                                onClick={() => handlePageChange(page - 1)}
+                                disabled={page === 1}
+                                style={{
+                                    padding: '4px 10px',
+                                    borderRadius: 999,
+                                    border: '1px solid #4b5563',
+                                    background: page === 1 ? '#020617' : '#0f172a',
+                                    color: page === 1 ? '#4b5563' : '#e5e7eb',
+                                    fontSize: 12,
+                                    cursor: page === 1 ? 'not-allowed' : 'pointer',
+                                }}
+                            >
+                                ‹ Trước
+                            </button>
+                            <span>
+                                Trang{' '}
+                                <strong style={{ color: '#e5e7eb' }}>{page}</strong> /{' '}
+                                {pagination.totalPages}
+                            </span>
+                            <button
+                                onClick={() => handlePageChange(page + 1)}
+                                disabled={page === pagination.totalPages}
+                                style={{
+                                    padding: '4px 10px',
+                                    borderRadius: 999,
+                                    border: '1px solid #4b5563',
+                                    background:
+                                        page === pagination.totalPages
+                                            ? '#020617'
+                                            : '#0f172a',
+                                    color:
+                                        page === pagination.totalPages
+                                            ? '#4b5563'
+                                            : '#e5e7eb',
+                                    fontSize: 12,
+                                    cursor:
+                                        page === pagination.totalPages
+                                            ? 'not-allowed'
+                                            : 'pointer',
+                                }}
+                            >
+                                Sau ›
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Modal thêm/sửa món */}
@@ -420,17 +569,25 @@ const MenuItemsPage = () => {
                             maxHeight: '90vh',
                             padding: 24,
                             overflowY: 'auto',
-                            color: "black"
+                            color: 'black',
                         }}
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <h2 style={{ margin: '0 0 16px', fontSize: 22, fontWeight: 700 }}>
+                        <h2
+                            style={{ margin: '0 0 16px', fontSize: 22, fontWeight: 700 }}
+                        >
                             {editingItem ? 'Sửa món' : 'Thêm món mới'}
                         </h2>
 
                         <form onSubmit={handleSubmit}>
                             <div style={{ marginBottom: 12 }}>
-                                <label style={{ display: 'block', marginBottom: 4, fontWeight: 600 }}>
+                                <label
+                                    style={{
+                                        display: 'block',
+                                        marginBottom: 4,
+                                        fontWeight: 600,
+                                    }}
+                                >
                                     Tên món
                                 </label>
                                 <input
@@ -457,7 +614,11 @@ const MenuItemsPage = () => {
                             >
                                 <div>
                                     <label
-                                        style={{ display: 'block', marginBottom: 4, fontWeight: 600 }}
+                                        style={{
+                                            display: 'block',
+                                            marginBottom: 4,
+                                            fontWeight: 600,
+                                        }}
                                     >
                                         Giá (₫)
                                     </label>
@@ -478,7 +639,11 @@ const MenuItemsPage = () => {
                                 </div>
                                 <div>
                                     <label
-                                        style={{ display: 'block', marginBottom: 4, fontWeight: 600 }}
+                                        style={{
+                                            display: 'block',
+                                            marginBottom: 4,
+                                            fontWeight: 600,
+                                        }}
                                     >
                                         Loại
                                     </label>
@@ -513,7 +678,11 @@ const MenuItemsPage = () => {
                             >
                                 <div>
                                     <label
-                                        style={{ display: 'block', marginBottom: 4, fontWeight: 600 }}
+                                        style={{
+                                            display: 'block',
+                                            marginBottom: 4,
+                                            fontWeight: 600,
+                                        }}
                                     >
                                         Category
                                     </label>
@@ -538,7 +707,11 @@ const MenuItemsPage = () => {
                                 </div>
                                 <div>
                                     <label
-                                        style={{ display: 'block', marginBottom: 4, fontWeight: 600 }}
+                                        style={{
+                                            display: 'block',
+                                            marginBottom: 4,
+                                            fontWeight: 600,
+                                        }}
                                     >
                                         Image URL (nếu có)
                                     </label>
@@ -557,7 +730,13 @@ const MenuItemsPage = () => {
                             </div>
 
                             <div style={{ marginBottom: 16 }}>
-                                <label style={{ display: 'block', marginBottom: 4, fontWeight: 600 }}>
+                                <label
+                                    style={{
+                                        display: 'block',
+                                        marginBottom: 4,
+                                        fontWeight: 600,
+                                    }}
+                                >
                                     Mô tả
                                 </label>
                                 <textarea
@@ -589,7 +768,7 @@ const MenuItemsPage = () => {
                                         padding: '8px 18px',
                                         borderRadius: 8,
                                         border: '1px solid #d1d5db',
-                                        background: '#333437ff',
+                                        background: '#f3f4f6',
                                         fontWeight: 600,
                                     }}
                                 >
