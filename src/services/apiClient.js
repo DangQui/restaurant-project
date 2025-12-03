@@ -1,5 +1,5 @@
 const BASE_URL = (
-  import.meta.env.VITE_ORDER_SERVICE_URL || "http://localhost:3001/"
+  import.meta.env.VITE_ORDER_SERVICE_URL || "http://localhost:3001"
 ).replace(/(?<!:)\/\/+/g, "/");
 
 let AUTH_TOKEN = null;

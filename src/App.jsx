@@ -16,12 +16,13 @@ import SearchPage from "@/pages/Search/Search";
 import CartPage from "@/pages/Cart/Cart";
 import CheckoutPage from "@/pages/Checkout/Checkout";
 import ReservationPage from "@/pages/Reservation/Reservation";
+import BlogPage from "@/pages/Blog/Blog";
+import PagesPage from "@/pages/Pages/Pages";
 import ProfilePage from "@/pages/Profile/Profile";
 import OrdersPage from "@/pages/Orders/Orders";
 import SettingsPage from "@/pages/Settings/Settings";
 import TrackingPage from "@/pages/Tracking/Tracking";
 import AuthDialog from "@/components/AuthDialog/AuthDialog";
-import BlogPage from "./pages/Blog/Blog";
 
 import AdminLayout from '@/layouts/AdminLayout/AdminLayout'
 import MenuItemsPage from '@/pages/Admin/MenuItemsPage'
@@ -41,6 +42,7 @@ const router = createBrowserRouter([
       { index: true, element: <HomePage /> },
       { path: "about", element: <AboutPage /> },
       { path: "contact", element: <ContactPage /> },
+      { path: "pages", element: <PagesPage /> },
       { path: "blog", element: <BlogPage /> },
       { path: "menu", element: <MenuPage /> },
       { path: "menu/:productId", element: <ProductPage /> },
